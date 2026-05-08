@@ -1,0 +1,136 @@
+export const products = [
+  {
+    id: 1,
+    name: 'Dulap Aura',
+    category: 'Dulapuri',
+    price: 2800,
+    priceLabel: 'de la 2.800 RON',
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800',
+      'https://images.unsplash.com/photo-1598928636135-d146006ff4be?w=800',
+    ],
+    badge: 'Bestseller',
+    description:
+      'Dulap cu uși glisante, finisaj mat, disponibil în toate dimensiunile și culorile.',
+    inStock: false,
+    configurable: true,
+  },
+  {
+    id: 2,
+    name: 'Pat Terra',
+    category: 'Paturi',
+    price: 3200,
+    priceLabel: 'de la 3.200 RON',
+    image: 'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=800',
+    ],
+    badge: 'Nou',
+    description: 'Pat tapițat cu tăblie înaltă, structură din lemn masiv.',
+    inStock: false,
+    configurable: true,
+  },
+  {
+    id: 3,
+    name: 'Birou Loft',
+    category: 'Birouri',
+    price: 1900,
+    priceLabel: 'de la 1.900 RON',
+    image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800',
+    ],
+    badge: null,
+    description: 'Birou minimal cu sertar lateral și picioare metalice negre.',
+    inStock: false,
+    configurable: true,
+  },
+  {
+    id: 4,
+    name: 'Bibliotecă Verso',
+    category: 'Biblioteci',
+    price: 2100,
+    priceLabel: 'de la 2.100 RON',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
+    ],
+    badge: null,
+    description: 'Bibliotecă modulară cu rafturi reglabile, finisaj stejar natural.',
+    inStock: false,
+    configurable: true,
+  },
+  {
+    id: 5,
+    name: 'Comodă Mira',
+    category: 'Comode',
+    price: 1600,
+    priceLabel: 'de la 1.600 RON',
+    image: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800',
+    ],
+    badge: 'Popular',
+    description:
+      'Comodă cu 4 sertare cu sistem push-open, disponibilă în 6 culori.',
+    inStock: false,
+    configurable: true,
+  },
+  {
+    id: 6,
+    name: 'Noptieră Scala',
+    category: 'Noptiere',
+    price: 750,
+    priceLabel: 'de la 750 RON',
+    image: 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=800',
+    ],
+    badge: null,
+    description: 'Noptieră flotantă cu sertar ascuns și priză USB integrată.',
+    inStock: false,
+    configurable: true,
+  },
+]
+
+export const categories = [
+  'Toate',
+  'Dulapuri',
+  'Paturi',
+  'Birouri',
+  'Biblioteci',
+  'Comode',
+  'Noptiere',
+]
+
+export const heroSlides = [
+  {
+    id: 1,
+    title: 'Mobilă gândită\npentru tine',
+    subtitle: 'Fiecare piesă este creată la comandă, după dimensiunile și preferințele tale.',
+    cta: 'Configurează acum',
+    ctaLink: '/configurator',
+    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400',
+    accent: '100% la comandă',
+  },
+  {
+    id: 2,
+    title: 'Design fără\ncompromisuri',
+    subtitle: 'Alege materialele, culoarea și finisajul. Noi facem restul.',
+    cta: 'Vezi produsele',
+    ctaLink: '/produse',
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1400',
+    accent: 'Livrare în 30 zile',
+  },
+  {
+    id: 3,
+    title: 'Calitate\nartizanală',
+    subtitle: 'Lemn masiv, materiale premium, execuție impecabilă pentru fiecare piesă.',
+    cta: 'Despre noi',
+    ctaLink: '/despre',
+    image: 'https://images.unsplash.com/photo-1567016432779-094069958ea5?w=1400',
+    accent: 'Garanție 5 ani',
+  },
+]
+
