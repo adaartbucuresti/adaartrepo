@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ClipboardList, Home, LayoutGrid, LogOut, MessageSquare, Package, PanelsTopLeft } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -229,7 +229,17 @@ export default function AdminDashboard() {
           </header>
 
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <MotionDiv
+                key={pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                <Outlet />
+              </MotionDiv>
+            </AnimatePresence>
           </main>
         </div>
       </div>

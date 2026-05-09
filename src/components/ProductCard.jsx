@@ -1,10 +1,17 @@
+import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 
 export default function ProductCard({ product }) {
   const badge = product.badge
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-softLg">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="group relative overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-softLg"
+    >
       <Link to={`/produs/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden">
           <img
@@ -39,7 +46,7 @@ export default function ProductCard({ product }) {
           Personalizează
         </Link>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
