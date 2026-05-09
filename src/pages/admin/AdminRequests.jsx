@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, Search, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Check, ChevronLeft, ChevronRight, Search, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 
 const tabs = [
@@ -32,12 +32,19 @@ const formatDate = (iso) => {
 
 export default function AdminRequests() {
   const MotionDiv = motion.div
+  const MotionButton = motion.button
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('toate')
   const [q, setQ] = useState('')
   const [lastNewRequest, setLastNewRequest] = useState(null)
+  const [page, setPage] = useState(1)
+  const pageSize = 10
+  const [totalCount, setTotalCount] = useState(0)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  const [stats, setStats] = useState({ total: 0, nou: 0, inLucru: 0, finalizat: 0 })
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -45,24 +52,78 @@ export default function AdminRequests() {
   const [saveError, setSaveError] = useState('')
   const [saveOk, setSaveOk] = useState('')
 
-  const load = async () => {
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const searchTimerRef = useRef(null)
+  const pageRef = useRef(1)
+
+  const loadStats = async () => {
+    const qs = [
+      supabase.from('configurator_requests').select('id', { count: 'exact', head: true }),
+      supabase.from('configurator_requests').select('id', { count: 'exact', head: true }).eq('status', 'nou'),
+      supabase.from('configurator_requests').select('id', { count: 'exact', head: true }).eq('status', 'in_lucru'),
+      supabase.from('configurator_requests').select('id', { count: 'exact', head: true }).eq('status', 'finalizat'),
+    ]
+    const [all, nou, inLucru, finalizat] = await Promise.all(qs)
+    setStats({
+      total: all.count || 0,
+      nou: nou.count || 0,
+      inLucru: inLucru.count || 0,
+      finalizat: finalizat.count || 0,
+    })
+  }
+
+  const load = async (pageArg = page, overrides = {}) => {
     setLoading(true)
     setError('')
-    const { data, error: fetchError } = await supabase
+    const from = (pageArg - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const active = overrides.activeTab ?? activeTab
+    const queryValue = overrides.q ?? q
+
+    let query = supabase
       .from('configurator_requests')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
+
+    if (active && active !== 'toate') query = query.eq('status', active)
+
+    const queryText = String(queryValue || '').trim()
+    if (queryText) {
+      const safe = queryText.replaceAll(',', ' ')
+      query = query.or(
+        [
+          `client_name.ilike.%${safe}%`,
+          `client_email.ilike.%${safe}%`,
+          `client_phone.ilike.%${safe}%`,
+          `product_type.ilike.%${safe}%`,
+          `material.ilike.%${safe}%`,
+          `color.ilike.%${safe}%`,
+        ].join(','),
+      )
+    }
+
+    const { data, count, error: fetchError } = await query.range(from, to)
     if (fetchError) {
       setError(fetchError.message)
       setRows([])
+      setTotalCount(0)
     } else {
       setRows(data || [])
+      setTotalCount(count || 0)
     }
     setLoading(false)
   }
 
   useEffect(() => {
-    Promise.resolve().then(() => load())
+    Promise.resolve().then(() => {
+      load(1)
+      loadStats()
+    })
   }, [])
 
   useEffect(() => {
@@ -77,7 +138,11 @@ export default function AdminRequests() {
           if (!alive) return
           const row = payload?.new || null
           setLastNewRequest(row)
-          Promise.resolve().then(() => load())
+          setPage(1)
+          Promise.resolve().then(() => {
+            load(1)
+            loadStats()
+          })
         },
       )
       .subscribe()
@@ -91,40 +156,96 @@ export default function AdminRequests() {
   }, [])
 
   useEffect(() => {
+    Promise.resolve().then(() => load(page))
+  }, [page])
+
+  useEffect(() => {
+    pageRef.current = page
+  }, [page])
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
+  const goToPage = (nextPage) => {
+    const safe = Math.min(totalPages, Math.max(1, nextPage))
+    setPage(safe)
+  }
+
+  const onChangeTab = (key) => {
+    setActiveTab(key)
+    if (pageRef.current === 1) {
+      Promise.resolve().then(() => load(1, { activeTab: key, q }))
+    } else {
+      setPage(1)
+    }
+  }
+
+  const onChangeQuery = (value) => {
+    setQ(value)
+    if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = window.setTimeout(() => {
+      if (pageRef.current === 1) {
+        Promise.resolve().then(() => load(1, { activeTab, q: value }))
+      } else {
+        setPage(1)
+      }
+    }, 250)
+  }
+
+  const openDelete = (row) => {
+    setDeleteError('')
+    setDeleteTarget(row)
+    setDeleteOpen(true)
+  }
+
+  const doDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    const { error: delError } = await supabase
+      .from('configurator_requests')
+      .delete()
+      .eq('id', deleteTarget.id)
+    if (delError) {
+      setDeleteError(delError.message)
+      setDeleting(false)
+      return
+    }
+    setDeleteOpen(false)
+    setDeleteTarget(null)
+    setDeleting(false)
+    setPage(1)
+    await load(1)
+    await loadStats()
+  }
+
+  const doDeleteAll = async () => {
+    setDeleting(true)
+    setDeleteError('')
+    const { error: delError } = await supabase
+      .from('configurator_requests')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+    if (delError) {
+      setDeleteError(delError.message)
+      setDeleting(false)
+      return
+    }
+    setDeleteAllOpen(false)
+    setDeleting(false)
+    setPage(1)
+    await load(1)
+    await loadStats()
+  }
+
+  useEffect(() => {
     if (!lastNewRequest) return
     const id = window.setTimeout(() => setLastNewRequest(null), 6500)
     return () => window.clearTimeout(id)
   }, [lastNewRequest])
-
-  const stats = useMemo(() => {
-    const total = rows.length
-    const nou = rows.filter((r) => r.status === 'nou').length
-    const inLucru = rows.filter((r) => r.status === 'in_lucru').length
-    const finalizat = rows.filter((r) => r.status === 'finalizat').length
-    return { total, nou, inLucru, finalizat }
-  }, [rows])
-
-  const filtered = useMemo(() => {
-    const byStatus =
-      activeTab === 'toate' ? rows : rows.filter((r) => r.status === activeTab)
-    const query = q.trim().toLowerCase()
-    if (!query) return byStatus
-    return byStatus.filter((r) => {
-      const hay = [
-        r.client_name,
-        r.client_email,
-        r.client_phone,
-        r.product_type,
-        r.material,
-        r.color,
-        r.status,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return hay.includes(query)
-    })
-  }, [activeTab, q, rows])
 
   const openDrawer = (row) => {
     setSaveError('')
@@ -155,10 +276,21 @@ export default function AdminRequests() {
       setSaveError(updateError.message)
     } else {
       setSaveOk('Salvat.')
-      await load()
+      await load(page)
+      await loadStats()
     }
     setSaving(false)
   }
+
+  const pageButtons = useMemo(() => {
+    const maxButtons = 7
+    if (totalPages <= maxButtons) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const buttons = new Set([1, totalPages])
+    for (let p = page - 2; p <= page + 2; p += 1) {
+      if (p > 1 && p < totalPages) buttons.add(p)
+    }
+    return Array.from(buttons).sort((a, b) => a - b)
+  }, [page, totalPages])
 
   return (
     <div>
@@ -209,7 +341,7 @@ export default function AdminRequests() {
               <button
                 key={t.key}
                 type="button"
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => onChangeTab(t.key)}
                 className={[
                   'rounded-full px-4 py-2 text-sm font-semibold transition',
                   active ? 'bg-brand-light text-brand-dark' : 'bg-white text-text-muted hover:text-text-dark',
@@ -226,10 +358,35 @@ export default function AdminRequests() {
           <Search className="h-4 w-4 text-text-muted" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => onChangeQuery(e.target.value)}
             placeholder="Caută client/produs/email…"
             className="w-full min-w-[200px] text-sm outline-none"
           />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-xs text-text-muted">
+          Total rezultate: <span className="font-semibold text-text-dark">{totalCount}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteError('')
+              setDeleteAllOpen(true)
+            }}
+            disabled={loading || totalCount === 0}
+            className={[
+              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition',
+              loading || totalCount === 0
+                ? 'border-border bg-cream text-text-muted'
+                : 'border-red-200 bg-white text-red-700 hover:bg-red-50',
+            ].join(' ')}
+          >
+            <Trash2 className="h-4 w-4" />
+            Șterge toate
+          </button>
         </div>
       </div>
 
@@ -262,14 +419,14 @@ export default function AdminRequests() {
                     {error}
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-sm text-text-muted">
                     Nu există cereri.
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
+                rows.map((r) => (
                   <tr key={r.id} className="border-t border-border hover:bg-warm/40">
                     <td className="px-4 py-3 text-xs text-text-muted">{formatDate(r.created_at)}</td>
                     <td className="px-4 py-3">
@@ -291,19 +448,75 @@ export default function AdminRequests() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => openDrawer(r)}
-                        className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-text-dark transition hover:bg-cream"
-                      >
-                        Detalii
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openDrawer(r)}
+                          className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-text-dark transition hover:bg-cream"
+                        >
+                          Detalii
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openDelete(r)}
+                          className="rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                        >
+                          Șterge
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="text-xs text-text-muted">
+          Pagina <span className="font-semibold text-text-dark">{page}</span> din{' '}
+          <span className="font-semibold text-text-dark">{totalPages}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1 || loading}
+            className={[
+              'inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white transition hover:bg-cream',
+              page <= 1 || loading ? 'opacity-50' : '',
+            ].join(' ')}
+            aria-label="Pagina anterioară"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          {pageButtons.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => goToPage(p)}
+              disabled={loading}
+              className={[
+                'h-9 min-w-9 rounded-full border px-3 text-xs font-semibold transition',
+                p === page ? 'border-brand-primary bg-brand-light text-brand-dark' : 'border-border bg-white text-text-dark hover:bg-cream',
+              ].join(' ')}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages || loading}
+            className={[
+              'inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white transition hover:bg-cream',
+              page >= totalPages || loading ? 'opacity-50' : '',
+            ].join(' ')}
+            aria-label="Pagina următoare"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -440,6 +653,159 @@ export default function AdminRequests() {
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </MotionDiv>
+          </MotionDiv>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteOpen ? (
+          <MotionDiv
+            className="fixed inset-0 z-[80] flex items-center justify-center px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <MotionButton
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => {
+                if (deleting) return
+                setDeleteOpen(false)
+                setDeleteTarget(null)
+              }}
+              aria-label="Închide"
+            />
+            <MotionDiv
+              className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-softLg"
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+            >
+              <div className="flex items-center justify-between border-b border-border px-6 py-5">
+                <div className="font-heading text-xl font-semibold text-text-dark">Șterge cererea</div>
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border"
+                  onClick={() => {
+                    if (deleting) return
+                    setDeleteOpen(false)
+                    setDeleteTarget(null)
+                  }}
+                  aria-label="Închide"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="px-6 py-6">
+                <div className="text-sm text-text-dark">
+                  Sigur vrei să ștergi această cerere? Acțiunea este permanentă.
+                </div>
+                {deleteTarget ? (
+                  <div className="mt-3 rounded-xl bg-cream px-4 py-3 text-xs text-text-muted">
+                    <div className="font-semibold text-text-dark">{deleteTarget.client_name}</div>
+                    <div className="mt-1">{deleteTarget.product_type}</div>
+                  </div>
+                ) : null}
+                {deleteError ? <div className="mt-3 text-xs text-red-600">{deleteError}</div> : null}
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-full border border-border bg-white px-5 py-2.5 text-sm font-semibold text-text-dark hover:bg-cream"
+                    onClick={() => {
+                      if (deleting) return
+                      setDeleteOpen(false)
+                      setDeleteTarget(null)
+                    }}
+                  >
+                    Anulează
+                  </button>
+                  <button
+                    type="button"
+                    onClick={doDelete}
+                    disabled={deleting}
+                    className={[
+                      'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition',
+                      deleting ? 'bg-red-600/60' : 'bg-red-600 hover:bg-red-700',
+                    ].join(' ')}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleting ? 'Se șterge…' : 'Șterge'}
+                  </button>
+                </div>
+              </div>
+            </MotionDiv>
+          </MotionDiv>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteAllOpen ? (
+          <MotionDiv
+            className="fixed inset-0 z-[80] flex items-center justify-center px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <MotionButton
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => {
+                if (deleting) return
+                setDeleteAllOpen(false)
+              }}
+              aria-label="Închide"
+            />
+            <MotionDiv
+              className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-softLg"
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+            >
+              <div className="flex items-center justify-between border-b border-border px-6 py-5">
+                <div className="font-heading text-xl font-semibold text-text-dark">Șterge toate cererile</div>
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border"
+                  onClick={() => {
+                    if (deleting) return
+                    setDeleteAllOpen(false)
+                  }}
+                  aria-label="Închide"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="px-6 py-6">
+                <div className="text-sm text-text-dark">
+                  Sigur vrei să ștergi toate cererile? Acțiunea este permanentă.
+                </div>
+                {deleteError ? <div className="mt-3 text-xs text-red-600">{deleteError}</div> : null}
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-full border border-border bg-white px-5 py-2.5 text-sm font-semibold text-text-dark hover:bg-cream"
+                    onClick={() => {
+                      if (deleting) return
+                      setDeleteAllOpen(false)
+                    }}
+                  >
+                    Anulează
+                  </button>
+                  <button
+                    type="button"
+                    onClick={doDeleteAll}
+                    disabled={deleting}
+                    className={[
+                      'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition',
+                      deleting ? 'bg-red-600/60' : 'bg-red-600 hover:bg-red-700',
+                    ].join(' ')}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleting ? 'Se șterg…' : 'Șterge tot'}
+                  </button>
                 </div>
               </div>
             </MotionDiv>
