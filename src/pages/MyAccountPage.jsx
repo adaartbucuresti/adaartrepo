@@ -8,10 +8,10 @@ import {
   Menu,
   Pencil,
   Shield,
-  Upload,
   User,
   X,
 } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth.js'
@@ -139,6 +139,11 @@ export default function MyAccountPage() {
   const [requestsLoading, setRequestsLoading] = useState(false)
   const [requestsError, setRequestsError] = useState('')
   const [selectedRequest, setSelectedRequest] = useState(null)
+  const [portalNode, setPortalNode] = useState(null)
+
+  useEffect(() => {
+    setPortalNode(document.body)
+  }, [])
 
   const email = String(user?.email || '').trim()
 
@@ -208,7 +213,7 @@ export default function MyAccountPage() {
   }
 
   const inputClass =
-    'w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-dark outline-none transition duration-200 placeholder:text-text-muted/60 focus:border-[#2d4a3e] focus:ring-2 focus:ring-[#2d4a3e]/20'
+    'w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-dark outline-none transition duration-200 placeholder:text-text-muted/60 focus:border-[#2d4a3e] focus:ring-2 focus:ring-[#2d4a3e]/20 disabled:cursor-not-allowed disabled:bg-[#f5f3ef] disabled:text-text-muted'
 
   const secondaryButtonClass =
     'inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-5 py-2.5 text-sm font-semibold text-text-dark transition duration-200 hover:bg-[#f5f3ef]'
@@ -216,36 +221,14 @@ export default function MyAccountPage() {
   const primaryButtonClass =
     'inline-flex items-center justify-center gap-2 rounded-full bg-[#2d4a3e] px-6 py-3 text-sm font-semibold text-white transition duration-200 hover:bg-[#243b32] focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30'
 
+  const editButtonClass =
+    'inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-3.5 py-2 text-xs font-semibold text-text-dark transition duration-200 hover:bg-[#f5f3ef]'
+
   const revealProps = {
     initial: { opacity: 0, y: 12 },
     whileInView: { opacity: 1, y: 0 },
     viewport: { once: true, amount: 0.15 },
     transition: { duration: 0.35, ease: 'easeOut' },
-  }
-
-  const [avatarUrl, setAvatarUrl] = useState('')
-  const avatarInputRef = useRef(null)
-
-  useEffect(() => {
-    return () => {
-      if (avatarUrl && avatarUrl.startsWith('blob:')) URL.revokeObjectURL(avatarUrl)
-    }
-  }, [avatarUrl])
-
-  const openAvatarPicker = () => {
-    if (avatarInputRef.current) avatarInputRef.current.click()
-  }
-
-  const onPickAvatar = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type?.startsWith('image/')) {
-      pushToast({ type: 'error', title: 'Fișier invalid.', message: 'Alege o imagine (PNG/JPG/WEBP).' })
-      return
-    }
-    const url = URL.createObjectURL(file)
-    setAvatarUrl(url)
-    pushToast({ type: 'success', title: 'Fotografie selectată.', message: 'Apasă „Salvează modificările” pentru a confirma.' })
   }
 
   const fullNameParts = useMemo(() => {
@@ -281,8 +264,21 @@ export default function MyAccountPage() {
   const toggleField = (field) => {
     setEditingFields((prev) => {
       const next = new Set(prev)
-      if (next.has(field)) next.delete(field)
-      else next.add(field)
+      if (next.has(field)) {
+        next.delete(field)
+      } else {
+        next.add(field)
+        const el = inputRefs.current[field]
+        if (el) {
+          window.setTimeout(() => {
+            try {
+              el.focus?.()
+              el.select?.()
+            } catch {
+            }
+          }, 0)
+        }
+      }
       return next
     })
   }
@@ -290,6 +286,14 @@ export default function MyAccountPage() {
   const updatePersonalField = (field, value) => {
     setPersonalDraft((prev) => ({ ...prev, [field]: value }))
   }
+
+  const inputRefs = useRef({
+    firstName: null,
+    lastName: null,
+    phone: null,
+    birthDate: null,
+    address: null,
+  })
 
   const savePersonal = async () => {
     if (!user) return
@@ -516,32 +520,16 @@ export default function MyAccountPage() {
           <aside className="hidden lg:block lg:col-span-1">
             <div className="rounded-2xl border border-border bg-white p-5 shadow-soft">
               <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="h-14 w-14 overflow-hidden rounded-2xl border border-border bg-[#f5f3ef]">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center font-heading text-lg font-semibold text-[#2d4a3e]">
-                        {getInitials(displayName)}
-                      </div>
-                    )}
+                <div className="h-14 w-14 overflow-hidden rounded-2xl border border-border bg-[#f5f3ef]">
+                  <div className="flex h-full w-full items-center justify-center font-heading text-lg font-semibold text-[#2d4a3e]">
+                    {getInitials(displayName)}
                   </div>
-                  <button
-                    type="button"
-                    onClick={openAvatarPicker}
-                    className="absolute -bottom-2 -right-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-text-muted shadow-soft transition duration-200 hover:bg-[#f5f3ef] hover:text-text-dark"
-                    aria-label="Încarcă o fotografie"
-                  >
-                    <Upload className="h-4 w-4" />
-                  </button>
                 </div>
                 <div className="min-w-0">
                   <div className="truncate font-heading text-lg font-semibold text-text-dark">{displayName}</div>
                   <div className="truncate text-xs text-text-muted">{email}</div>
                 </div>
               </div>
-
-              <input ref={avatarInputRef} type="file" accept="image/*" onChange={onPickAvatar} className="hidden" />
 
               <nav className="mt-5 grid gap-1">
                 {sections.map((item) => {
@@ -700,16 +688,19 @@ export default function MyAccountPage() {
                       <div>
                         <div className="flex items-center justify-between gap-3">
                           <label className="text-xs font-semibold text-text-muted">Nume</label>
-                          <button type="button" onClick={() => toggleField('firstName')} className={secondaryButtonClass}>
+                          <button type="button" onClick={() => toggleField('firstName')} className={editButtonClass}>
                             <Pencil className="h-4 w-4 text-text-muted" />
                             {editingFields.has('firstName') ? 'Gata' : 'Editează'}
                           </button>
                         </div>
                         <input
-                          className={[inputClass, editingFields.has('firstName') ? '' : 'bg-[#f5f3ef]'].join(' ')}
+                          ref={(el) => {
+                            inputRefs.current.firstName = el
+                          }}
+                          className={['mt-2', inputClass].join(' ')}
                           value={personalDraft.firstName}
                           onChange={(e) => updatePersonalField('firstName', e.target.value)}
-                          readOnly={!editingFields.has('firstName')}
+                          disabled={!editingFields.has('firstName')}
                           placeholder="Nume"
                         />
                       </div>
@@ -717,16 +708,19 @@ export default function MyAccountPage() {
                       <div>
                         <div className="flex items-center justify-between gap-3">
                           <label className="text-xs font-semibold text-text-muted">Prenume</label>
-                          <button type="button" onClick={() => toggleField('lastName')} className={secondaryButtonClass}>
+                          <button type="button" onClick={() => toggleField('lastName')} className={editButtonClass}>
                             <Pencil className="h-4 w-4 text-text-muted" />
                             {editingFields.has('lastName') ? 'Gata' : 'Editează'}
                           </button>
                         </div>
                         <input
-                          className={[inputClass, editingFields.has('lastName') ? '' : 'bg-[#f5f3ef]'].join(' ')}
+                          ref={(el) => {
+                            inputRefs.current.lastName = el
+                          }}
+                          className={['mt-2', inputClass].join(' ')}
                           value={personalDraft.lastName}
                           onChange={(e) => updatePersonalField('lastName', e.target.value)}
-                          readOnly={!editingFields.has('lastName')}
+                          disabled={!editingFields.has('lastName')}
                           placeholder="Prenume"
                         />
                       </div>
@@ -740,22 +734,25 @@ export default function MyAccountPage() {
                             Verificat
                           </span>
                         </div>
-                        <input className={[inputClass, 'bg-[#f5f3ef]'].join(' ')} value={email} readOnly />
+                        <input className={['mt-2', inputClass, 'bg-[#f5f3ef]'].join(' ')} value={email} readOnly />
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between gap-3">
                           <label className="text-xs font-semibold text-text-muted">Număr de telefon</label>
-                          <button type="button" onClick={() => toggleField('phone')} className={secondaryButtonClass}>
+                          <button type="button" onClick={() => toggleField('phone')} className={editButtonClass}>
                             <Pencil className="h-4 w-4 text-text-muted" />
                             {editingFields.has('phone') ? 'Gata' : 'Editează'}
                           </button>
                         </div>
                         <input
-                          className={[inputClass, editingFields.has('phone') ? '' : 'bg-[#f5f3ef]'].join(' ')}
+                          ref={(el) => {
+                            inputRefs.current.phone = el
+                          }}
+                          className={['mt-2', inputClass].join(' ')}
                           value={personalDraft.phone}
                           onChange={(e) => updatePersonalField('phone', e.target.value)}
-                          readOnly={!editingFields.has('phone')}
+                          disabled={!editingFields.has('phone')}
                           placeholder="07xx xxx xxx"
                           inputMode="tel"
                         />
@@ -766,59 +763,41 @@ export default function MyAccountPage() {
                       <div>
                         <div className="flex items-center justify-between gap-3">
                           <label className="text-xs font-semibold text-text-muted">Dată naștere</label>
-                          <button type="button" onClick={() => toggleField('birthDate')} className={secondaryButtonClass}>
+                          <button type="button" onClick={() => toggleField('birthDate')} className={editButtonClass}>
                             <Pencil className="h-4 w-4 text-text-muted" />
                             {editingFields.has('birthDate') ? 'Gata' : 'Editează'}
                           </button>
                         </div>
                         <input
                           type="date"
-                          className={[inputClass, editingFields.has('birthDate') ? '' : 'bg-[#f5f3ef]'].join(' ')}
+                          ref={(el) => {
+                            inputRefs.current.birthDate = el
+                          }}
+                          className={['mt-2', inputClass].join(' ')}
                           value={personalDraft.birthDate}
                           onChange={(e) => updatePersonalField('birthDate', e.target.value)}
-                          readOnly={!editingFields.has('birthDate')}
+                          disabled={!editingFields.has('birthDate')}
                         />
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between gap-3">
                           <label className="text-xs font-semibold text-text-muted">Adresă</label>
-                          <button type="button" onClick={() => toggleField('address')} className={secondaryButtonClass}>
+                          <button type="button" onClick={() => toggleField('address')} className={editButtonClass}>
                             <Pencil className="h-4 w-4 text-text-muted" />
                             {editingFields.has('address') ? 'Gata' : 'Editează'}
                           </button>
                         </div>
                         <input
-                          className={[inputClass, editingFields.has('address') ? '' : 'bg-[#f5f3ef]'].join(' ')}
+                          ref={(el) => {
+                            inputRefs.current.address = el
+                          }}
+                          className={['mt-2', inputClass].join(' ')}
                           value={personalDraft.address}
                           onChange={(e) => updatePersonalField('address', e.target.value)}
-                          readOnly={!editingFields.has('address')}
+                          disabled={!editingFields.has('address')}
                           placeholder="Stradă, număr, oraș"
                         />
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-border bg-[#f5f3ef] p-5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-semibold text-text-dark">Avatar</div>
-                          <div className="mt-1 text-xs text-text-muted">Alege o fotografie pentru cont (previzualizare locală).</div>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <button type="button" onClick={openAvatarPicker} className={secondaryButtonClass}>
-                            <Upload className="h-4 w-4 text-text-muted" />
-                            Încarcă
-                          </button>
-                          {avatarUrl ? (
-                            <button
-                              type="button"
-                              onClick={() => setAvatarUrl('')}
-                              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-700 transition duration-200 hover:bg-red-50"
-                            >
-                              Elimină
-                            </button>
-                          ) : null}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1190,121 +1169,128 @@ export default function MyAccountPage() {
         ) : null}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {selectedRequest ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50"
-          >
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/30"
-              onClick={() => setSelectedRequest(null)}
-              aria-label="Închide detaliile"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="absolute left-1/2 top-24 w-[min(720px,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-white shadow-softLg"
-            >
-              <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
-                <div className="min-w-0">
-                  <div className="truncate font-heading text-xl font-semibold text-text-dark">
-                    {selectedRequest.product_type || 'Cerere configurator'}
-                  </div>
-                  <div className="mt-1 text-xs text-text-muted">{formatDate(selectedRequest.created_at)}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRequest(null)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-text-muted transition duration-200 hover:bg-[#f5f3ef] hover:text-text-dark"
-                  aria-label="Închide"
+      {portalNode
+        ? createPortal(
+            <AnimatePresence>
+              {selectedRequest ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[80] flex items-center justify-center p-4"
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="grid gap-4 px-5 py-5">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                    <div className="text-xs font-semibold text-text-muted">ID cerere</div>
-                    <div className="mt-1 flex items-center justify-between gap-3">
-                      <div className="truncate text-sm font-semibold text-text-dark">{selectedRequest.id}</div>
+                  <button
+                    type="button"
+                    className="absolute inset-0 bg-black/30"
+                    onClick={() => setSelectedRequest(null)}
+                    aria-label="Închide detaliile"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 18, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-white shadow-softLg"
+                  >
+                    <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+                      <div className="min-w-0">
+                        <div className="truncate font-heading text-xl font-semibold text-text-dark">
+                          {selectedRequest.product_type || 'Cerere configurator'}
+                        </div>
+                        <div className="mt-1 text-xs text-text-muted">{formatDate(selectedRequest.created_at)}</div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          navigator?.clipboard?.writeText?.(String(selectedRequest.id || ''))
-                          pushToast({ type: 'success', title: 'ID copiat.', message: '' })
-                        }}
-                        className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-text-muted transition duration-200 hover:bg-white hover:text-text-dark"
+                        onClick={() => setSelectedRequest(null)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-text-muted transition duration-200 hover:bg-[#f5f3ef] hover:text-text-dark"
+                        aria-label="Închide"
                       >
-                        Copiază
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                    <div className="text-xs font-semibold text-text-muted">Status</div>
-                    <div className="mt-2">
-                      <span
-                        className={[
-                          'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
-                          statusBadgeClass[selectedRequest.status || 'nou'] || 'bg-[#f5f3ef] text-text-muted ring-1 ring-border',
-                        ].join(' ')}
-                      >
-                        {statusLabel[selectedRequest.status || 'nou'] || selectedRequest.status || '—'}
-                      </span>
+
+                    <div className="max-h-[min(80vh,720px)] overflow-y-auto px-5 py-5">
+                      <div className="grid gap-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
+                            <div className="text-xs font-semibold text-text-muted">ID cerere</div>
+                            <div className="mt-1 flex items-center justify-between gap-3">
+                              <div className="truncate text-sm font-semibold text-text-dark">{selectedRequest.id}</div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator?.clipboard?.writeText?.(String(selectedRequest.id || ''))
+                                  pushToast({ type: 'success', title: 'ID copiat.', message: '' })
+                                }}
+                                className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-text-muted transition duration-200 hover:bg-white hover:text-text-dark"
+                              >
+                                Copiază
+                              </button>
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
+                            <div className="text-xs font-semibold text-text-muted">Status</div>
+                            <div className="mt-2">
+                              <span
+                                className={[
+                                  'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                                  statusBadgeClass[selectedRequest.status || 'nou'] || 'bg-[#f5f3ef] text-text-muted ring-1 ring-border',
+                                ].join(' ')}
+                              >
+                                {statusLabel[selectedRequest.status || 'nou'] || selectedRequest.status || '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
+                            <div className="text-xs font-semibold text-text-muted">Dimensiuni</div>
+                            <div className="mt-1 text-sm font-semibold text-text-dark">
+                              {selectedRequest.width_cm && selectedRequest.height_cm && selectedRequest.depth_cm
+                                ? `${selectedRequest.width_cm}×${selectedRequest.height_cm}×${selectedRequest.depth_cm} cm`
+                                : '—'}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
+                            <div className="text-xs font-semibold text-text-muted">Material</div>
+                            <div className="mt-1 text-sm font-semibold text-text-dark">{selectedRequest.material || '—'}</div>
+                          </div>
+                          <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
+                            <div className="text-xs font-semibold text-text-muted">Culoare</div>
+                            <div className="mt-1 text-sm font-semibold text-text-dark">{selectedRequest.color || '—'}</div>
+                          </div>
+                        </div>
+
+                        {selectedRequest.admin_notes ? (
+                          <div className="rounded-2xl border border-border bg-[#f5f3ef] p-5">
+                            <div className="text-xs font-semibold text-text-muted">Mesaj din partea echipei</div>
+                            <div className="mt-2 text-sm text-text-dark">{selectedRequest.admin_notes}</div>
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-xs text-text-muted">
+                            Pentru o cerere nouă, folosește configuratorul. Pentru întrebări, scrie-ne pe pagina de contact.
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Link to="/configurator" className={secondaryButtonClass}>
+                              Trimite cerere nouă
+                            </Link>
+                            <button type="button" onClick={() => setSelectedRequest(null)} className={primaryButtonClass}>
+                              Închide
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                    <div className="text-xs font-semibold text-text-muted">Dimensiuni</div>
-                    <div className="mt-1 text-sm font-semibold text-text-dark">
-                      {selectedRequest.width_cm && selectedRequest.height_cm && selectedRequest.depth_cm
-                        ? `${selectedRequest.width_cm}×${selectedRequest.height_cm}×${selectedRequest.depth_cm} cm`
-                        : '—'}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                    <div className="text-xs font-semibold text-text-muted">Material</div>
-                    <div className="mt-1 text-sm font-semibold text-text-dark">{selectedRequest.material || '—'}</div>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                    <div className="text-xs font-semibold text-text-muted">Culoare</div>
-                    <div className="mt-1 text-sm font-semibold text-text-dark">{selectedRequest.color || '—'}</div>
-                  </div>
-                </div>
-
-                {selectedRequest.admin_notes ? (
-                  <div className="rounded-2xl border border-border bg-[#f5f3ef] p-5">
-                    <div className="text-xs font-semibold text-text-muted">Mesaj din partea echipei</div>
-                    <div className="mt-2 text-sm text-text-dark">{selectedRequest.admin_notes}</div>
-                  </div>
-                ) : null}
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-xs text-text-muted">
-                    Pentru o cerere nouă, folosește configuratorul. Pentru întrebări, scrie-ne pe pagina de contact.
-                  </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Link to="/configurator" className={secondaryButtonClass}>
-                      Trimite cerere nouă
-                    </Link>
-                    <button type="button" onClick={() => setSelectedRequest(null)} className={primaryButtonClass}>
-                      Închide
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+                  </motion.div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>,
+            portalNode,
+          )
+        : null}
 
       <AnimatePresence>
         {mobileBottomVisible ? (

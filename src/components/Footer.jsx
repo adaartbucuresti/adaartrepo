@@ -6,8 +6,8 @@ export default function Footer() {
     <footer className="border-t border-border bg-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-4">
         <div>
-          <div className="font-heading text-2xl font-semibold text-brand-dark">
-            Mob Design
+          <div className="font-heading text-2xl font-semibold tracking-[0.22em] text-brand-dark">
+            ADA ART
           </div>
           <p className="mt-3 text-sm text-text-muted">
             Mobilă la comandă, gândită pentru spațiul tău. Design personalizat, materiale premium,
@@ -49,7 +49,7 @@ export default function Footer() {
             </div>
             <div className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 text-brand-mid" />
-              <span>București, România</span>
+              <span>Str. Vasile Stolnicul, Nr.3 Zona Baicului sector 2, Bucuresti</span>
             </div>
           </div>
         </div>
@@ -90,7 +90,7 @@ export default function Footer() {
 
       <div className="border-t border-border bg-cream">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-text-muted md:flex-row">
-          <span>© {new Date().getFullYear()} Mob Design. Toate drepturile rezervate.</span>
+          <span>© 2026 ADA ART. Toate drepturile rezervate.</span>
           <span>Mobilă la comandă în România</span>
         </div>
       </div>

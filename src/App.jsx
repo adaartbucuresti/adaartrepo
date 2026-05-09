@@ -28,9 +28,9 @@ function PublicLayout() {
         <AnimatePresence mode="wait">
           <MotionDiv
             key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
             <Outlet />
@@ -61,9 +61,9 @@ export default function App() {
           path="/login"
           element={
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
             >
               <AuthPage />
@@ -76,9 +76,9 @@ export default function App() {
           element={
             <AdminRoute>
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
               >
                 <AdminDashboard />

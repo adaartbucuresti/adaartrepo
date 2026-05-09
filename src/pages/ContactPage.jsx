@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mail, MapPin, Phone, X } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, Mail, MapPin, Paperclip, Phone, User, X } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -9,18 +9,73 @@ const fadeUp = {
 
 const confirmationText = 'Cererea ta a fost înregistrată! Te contactăm în 24 de ore.'
 
+const formatBytes = (value) => {
+  const bytes = Number(value || 0)
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
+  const n = bytes / 1024 ** i
+  const digits = i === 0 ? 0 : n < 10 ? 1 : 0
+  return `${n.toFixed(digits)} ${units[i]}`
+}
+
 export default function ContactPage() {
   const MotionDiv = motion.div
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
+  const [files, setFiles] = useState([])
+  const [agreed, setAgreed] = useState(false)
+  const [formError, setFormError] = useState('')
   const [successOpen, setSuccessOpen] = useState(false)
+  const fileRef = useRef(null)
+
+  const maxFiles = 10
+  const maxTotalBytes = 30 * 1024 * 1024
 
   const submit = (e) => {
     e.preventDefault()
+    setFormError('')
+    if (!agreed) {
+      setFormError('Confirmă acordul GDPR pentru a trimite mesajul.')
+      return
+    }
     setSuccessOpen(true)
   }
+
+  const openFilePicker = () => {
+    fileRef.current?.click?.()
+  }
+
+  const onPickFiles = (e) => {
+    const incoming = Array.from(e.target.files || [])
+    if (!incoming.length) return
+
+    const next = [...files]
+    for (const f of incoming) {
+      if (next.length >= maxFiles) break
+      const exists = next.some((x) => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)
+      if (!exists) next.push(f)
+    }
+
+    const total = next.reduce((acc, f) => acc + (f?.size || 0), 0)
+    if (total > maxTotalBytes) {
+      setFormError('Dimensiunea totală a fișierelor depășește 30MB.')
+    } else {
+      setFormError('')
+    }
+
+    setFiles(next)
+    e.target.value = ''
+  }
+
+  const removeFile = (idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const totalSize = files.reduce((acc, f) => acc + (f?.size || 0), 0)
+  const canSubmit = agreed && totalSize <= maxTotalBytes
 
   return (
     <div className="bg-cream">
@@ -50,28 +105,42 @@ export default function ContactPage() {
             <form onSubmit={submit} className="mt-5 grid gap-4">
               <div>
                 <label className="text-xs font-medium text-text-muted">Nume</label>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
-                />
+                <div className="relative mt-2">
+                  <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-white py-3 pl-11 pr-4 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+                    placeholder="Numele tău"
+                  />
+                </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-xs font-medium text-text-muted">Email</label>
-                  <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
-                  />
+                  <div className="relative mt-2">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-white py-3 pl-11 pr-4 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+                      placeholder="email@exemplu.ro"
+                      inputMode="email"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-text-muted">Telefon</label>
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
-                  />
+                  <div className="relative mt-2">
+                    <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-white py-3 pl-11 pr-4 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+                      placeholder="+40 7xx xxx xxx"
+                      inputMode="tel"
+                    />
+                  </div>
                 </div>
               </div>
               <div>
@@ -83,11 +152,105 @@ export default function ContactPage() {
                   className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
                 />
               </div>
+
+              <div className="rounded-2xl border border-border bg-cream p-5">
+                <div className="text-sm font-semibold text-text-dark">Fișiere atașate</div>
+                <div className="mt-1 text-xs text-text-muted">
+                  Încarcă schițe, imagini sau materiale video utile pentru estimarea proiectului. Poți adăuga până la 10 fișiere (maxim 30MB).
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold text-text-dark transition duration-200 hover:bg-brand-light"
+                  >
+                    <Paperclip className="h-4 w-4 text-text-muted" />
+                    Alege fișiere
+                  </button>
+                  <div className="text-xs text-text-muted">
+                    {files.length}/{maxFiles} • {formatBytes(totalSize)} / {formatBytes(maxTotalBytes)}
+                  </div>
+                </div>
+
+                <input
+                  ref={fileRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,application/pdf,application/zip,application/x-zip-compressed,application/x-rar-compressed"
+                  onChange={onPickFiles}
+                  className="hidden"
+                />
+
+                {files.length ? (
+                  <div className="mt-4 grid gap-2">
+                    {files.map((f, idx) => (
+                      <div
+                        key={`${f.name}-${f.size}-${f.lastModified}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-text-dark">{f.name}</div>
+                          <div className="mt-0.5 text-xs text-text-muted">{formatBytes(f.size)}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-muted transition duration-200 hover:bg-brand-light hover:text-text-dark"
+                          aria-label="Elimină fișier"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    id="gdpr"
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-1 h-5 w-5 rounded border-border text-brand-primary accent-[#2d4a3e]"
+                  />
+                  <div className="min-w-0">
+                    <label htmlFor="gdpr" className="text-sm font-semibold text-text-dark">
+                      Sunt de acord cu prelucrarea datelor personale <span className="text-red-600">*</span>
+                    </label>
+                    <div className="mt-1 text-xs text-text-muted">
+                      Folosim aceste date doar pentru a răspunde cererii tale.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => e.preventDefault()}
+                      className="mt-2 inline-flex text-xs font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark"
+                    >
+                      Citește politica GDPR
+                    </button>
+                    {!agreed && formError ? <div className="mt-2 text-xs font-semibold text-red-600">Obligatoriu</div> : null}
+                  </div>
+                </div>
+              </div>
+
+              {formError && agreed ? <div className="text-sm font-semibold text-red-600">{formError}</div> : null}
+
               <button
                 type="submit"
-                className="mt-1 inline-flex w-full items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid"
+                disabled={!canSubmit}
+                className={[
+                  'group mt-1 inline-flex w-full items-center justify-between rounded-full px-7 py-3 text-sm font-semibold text-white transition-all duration-300',
+                  'bg-brand-primary shadow-soft hover:-translate-y-0.5 hover:bg-brand-mid hover:shadow-softLg active:translate-y-0 active:scale-[0.99]',
+                  'focus:outline-none focus:ring-2 focus:ring-brand-primary/30',
+                  canSubmit ? '' : 'cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-soft',
+                ].join(' ')}
               >
-                Trimite
+                <span className="flex-1 text-center">Trimite</span>
+                <span className="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition-all duration-300 group-hover:bg-white/20 group-hover:translate-x-0.5">
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               </button>
             </form>
           </MotionDiv>
@@ -105,7 +268,7 @@ export default function ContactPage() {
                 <MapPin className="mt-0.5 h-5 w-5 text-brand-mid" />
                 <div>
                   <div className="font-medium text-text-dark">Adresă</div>
-                  <div>București, România</div>
+                  <div>Str. Vasile Stolnicul, Nr.3 Zona Baicului sector 2, Bucuresti</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -131,7 +294,7 @@ export default function ContactPage() {
               <iframe
                 title="Harta"
                 className="h-64 w-full"
-                src="https://www.google.com/maps?q=Bucuresti&output=embed"
+                src="https://www.google.com/maps?q=Str.%20Vasile%20Stolnicul%2C%20Nr.3%2C%20Zona%20Baicului%2C%20Sector%202%2C%20Bucuresti&output=embed"
                 loading="lazy"
               />
             </div>

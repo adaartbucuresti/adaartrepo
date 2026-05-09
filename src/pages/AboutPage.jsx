@@ -11,34 +11,62 @@ export default function AboutPage() {
   const MotionDiv = motion.div
   return (
     <div className="bg-cream">
-      <section className="relative overflow-hidden bg-cream">
-        <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=1600"
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-black/45" />
-        </div>
+      <section className="bg-cream">
+        <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
+          <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
+            <MotionDiv className="lg:col-span-6" variants={fadeUp} initial="hidden" animate="visible">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-text-dark">
+                <span className="h-2 w-2 rounded-full bg-brand-mid" />
+                Despre noi
+              </div>
 
-        <div className="relative mx-auto max-w-6xl px-4 py-20 md:py-28">
-          <MotionDiv variants={fadeUp} initial="hidden" animate="visible">
-            <div className="text-sm font-medium text-white/80">Despre noi</div>
-            <h1 className="mt-3 max-w-2xl font-heading text-4xl font-semibold text-white md:text-6xl">
-              Calitate artizanală, mobilă la comandă
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/85 md:text-base">
-              Proiectăm și realizăm mobilier personalizat, adaptat fiecărui spațiu. De la primele
-              schițe până la montaj, te ghidăm pas cu pas.
-            </p>
-            <Link
-              to="/configurator"
-              className="mt-8 inline-flex rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid"
-            >
-              Începe în configurator
-            </Link>
-          </MotionDiv>
+              <div className="mt-5">
+                <div className="inline-flex items-center rounded-full bg-brand-light px-4 py-2 text-xs font-semibold text-brand-dark ring-1 ring-brand-primary/20">
+                  <span className="font-heading text-base font-semibold text-brand-mid">25</span>
+                  <span className="ml-2">de ani pe piață!</span>
+                </div>
+              </div>
+
+              <h1 className="mt-5 max-w-xl font-heading text-4xl font-semibold text-text-dark md:text-6xl">
+                Calitate artizanală, mobilă la comandă
+              </h1>
+              <p className="mt-5 max-w-xl text-sm leading-relaxed text-text-muted md:text-base">
+                Proiectăm și realizăm mobilier personalizat, adaptat fiecărui spațiu. De la primele
+                schițe până la montaj, te ghidăm pas cu pas.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link
+                  to="/configurator"
+                  className="inline-flex items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid"
+                >
+                  Începe în configurator
+                </Link>
+                <div className="text-xs font-semibold text-text-muted">
+                  Lucrăm la comandă • materiale premium • finisaje curate
+                </div>
+              </div>
+            </MotionDiv>
+
+            <MotionDiv className="lg:col-span-6" variants={fadeUp} initial="hidden" animate="visible">
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+                <div className="absolute left-5 top-5 z-10 inline-flex items-center rounded-full bg-white/85 px-4 py-2 text-xs font-semibold text-text-dark ring-1 ring-border backdrop-blur">
+                  25 de ani pe piață
+                </div>
+                <div className="absolute bottom-5 right-5 z-10 rounded-2xl bg-brand-primary/90 px-4 py-3 text-xs font-semibold text-white shadow-soft backdrop-blur">
+                  Calitate, de la schiță la montaj
+                </div>
+                <div className="relative aspect-[16/10]">
+                  <img
+                    src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=1600"
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-[radial-gradient(90%_80%_at_0%_0%,rgba(198,139,89,0.30),rgba(198,139,89,0)_55%),linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0))]" />
+                </div>
+              </div>
+            </MotionDiv>
+          </div>
         </div>
       </section>
 
@@ -54,6 +82,10 @@ export default function AboutPage() {
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
               Mob Design s-a născut din pasiunea pentru materiale naturale și design funcțional. Ne
               concentrăm pe detalii, finisaje curate și soluții inteligente pentru locuințe moderne.
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-text-muted">
+              <span className="font-semibold text-brand-mid">Suntem pe piață de 25 de ani</span>, iar fiecare proiect este construit cu aceeași prioritate:{' '}
+              <span className="font-semibold text-brand-mid">calitatea</span> — de la alegerea materialelor până la montaj.
             </p>
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
               Lucrăm transparent: configurezi online, apoi discutăm și validăm măsurătorile, iar
