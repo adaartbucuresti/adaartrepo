@@ -85,12 +85,24 @@ export default function Footer() {
               <Pin className="h-5 w-5" />
             </a>
           </div>
+          <div className="mt-6 text-sm font-semibold text-text-dark">Legal</div>
+          <div className="mt-4 flex flex-col gap-2 text-sm">
+            <Link className="text-text-muted hover:text-brand-mid" to="/politica-confidentialitate">
+              Politica de Confidențialitate
+            </Link>
+            <Link className="text-text-muted hover:text-brand-mid" to="/termeni-conditii">
+              Termeni și Condiții
+            </Link>
+            <Link className="text-text-muted hover:text-brand-mid" to="/politica-cookies">
+              Politica Cookie-uri
+            </Link>
+          </div>
         </div>
       </div>
 
       <div className="border-t border-border bg-cream">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-text-muted md:flex-row">
-          <span>© 2026 ADA ART. Toate drepturile rezervate.</span>
+          <span>© 2026 Ada Art Mob SRL. Toate drepturile rezervate.</span>
           <span>Mobilă la comandă în România</span>
         </div>
       </div>

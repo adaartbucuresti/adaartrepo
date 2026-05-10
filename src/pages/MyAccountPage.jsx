@@ -140,12 +140,39 @@ export default function MyAccountPage() {
   const [requestsError, setRequestsError] = useState('')
   const [selectedRequest, setSelectedRequest] = useState(null)
   const [portalNode, setPortalNode] = useState(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     setPortalNode(document.body)
   }, [])
 
   const email = String(user?.email || '').trim()
+  const deleteAccountAndData = async () => {
+    if (!user) return
+    setDeleteError('')
+    setDeleteLoading(true)
+    try {
+      if (!isSupabaseConfigured) throw new Error('Supabase nu este configurat.')
+      const { error: fnError } = await supabase.functions.invoke('delete-account')
+      if (!fnError) {
+        await signOut()
+        return
+      }
+      if (email) {
+        const { error: reqErr } = await supabase.from('configurator_requests').delete().eq('client_email', email)
+        if (reqErr) throw reqErr
+      }
+      const { error: profErr } = await supabase.from('profiles').delete().eq('id', user.id)
+      if (profErr) throw profErr
+      await signOut()
+    } catch (err) {
+      setDeleteError(err?.message || 'Nu am putut șterge datele. Încearcă din nou.')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!user || !email) return
@@ -899,6 +926,23 @@ export default function MyAccountPage() {
                       Pentru siguranță, poți ieși oricând din cont de pe acest dispozitiv folosind opțiunea „Ieși din cont”.
                     </div>
                   </motion.div>
+
+                  <motion.div {...revealProps} className="rounded-2xl border border-border bg-white p-6 shadow-soft">
+                    <div className="text-sm font-semibold text-text-dark">Ștergere cont</div>
+                    <div className="mt-1 text-xs text-text-muted">
+                      Șterge contul și datele asociate acestuia. Această acțiune este ireversibilă.
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-4 inline-flex items-center justify-center rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600/30"
+                      onClick={() => {
+                        setDeleteError('')
+                        setDeleteOpen(true)
+                      }}
+                    >
+                      Șterge contul și datele mele
+                    </button>
+                  </motion.div>
                 </motion.div>
               ) : null}
 
@@ -1291,6 +1335,80 @@ export default function MyAccountPage() {
             portalNode,
           )
         : null}
+
+      <AnimatePresence>
+        {deleteOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/30"
+              onClick={() => {
+                if (deleteLoading) return
+                setDeleteOpen(false)
+              }}
+              aria-label="Închide"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-white shadow-softLg"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+                <div className="min-w-0">
+                  <div className="truncate font-heading text-xl font-semibold text-text-dark">Confirmare ștergere</div>
+                  <div className="mt-1 text-xs text-text-muted">Ești sigur? Această acțiune este ireversibilă.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (deleteLoading) return
+                    setDeleteOpen(false)
+                  }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-text-muted transition duration-200 hover:bg-[#f5f3ef] hover:text-text-dark"
+                  aria-label="Închide"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="px-5 py-5">
+                <div className="rounded-2xl border border-red-600/20 bg-red-50 p-4 text-sm text-red-800">
+                  Ștergerea va elimina datele profilului și istoricul cererilor asociate emailului tău.
+                </div>
+                {deleteError ? <div className="mt-3 text-sm font-semibold text-red-600">{deleteError}</div> : null}
+
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    className={secondaryButtonClass}
+                    onClick={() => {
+                      if (deleteLoading) return
+                      setDeleteOpen(false)
+                    }}
+                  >
+                    Anulează
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                    disabled={deleteLoading}
+                    onClick={deleteAccountAndData}
+                  >
+                    {deleteLoading ? 'Se șterge…' : 'Confirmă ștergerea'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {mobileBottomVisible ? (

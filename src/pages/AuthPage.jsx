@@ -1,6 +1,6 @@
 import { ArrowLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -68,7 +68,7 @@ export default function AuthPage() {
       }
 
       if (!agreed) {
-        setError('Trebuie să accepți termenii pentru a crea cont.')
+        setError('Trebuie să accepți politica de confidențialitate pentru a continua')
         return
       }
 
@@ -241,7 +241,16 @@ export default function AuthPage() {
                     onChange={(e) => setAgreed(e.target.checked)}
                     className="mt-0.5 h-4 w-4 rounded border-border text-brand-primary"
                   />
-                  Sunt de acord cu termenii
+                  <span>
+                    Am citit și sunt de acord cu{' '}
+                    <Link to="/politica-confidentialitate" className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark">
+                      Politica de Confidențialitate
+                    </Link>{' '}
+                    și{' '}
+                    <Link to="/termeni-conditii" className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark">
+                      Termenii și Condițiile
+                    </Link>
+                  </span>
                 </label>
               ) : null}
 

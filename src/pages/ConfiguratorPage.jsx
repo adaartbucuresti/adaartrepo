@@ -544,7 +544,10 @@ export default function ConfiguratorPage() {
                         className="mt-0.5 h-4 w-4 accent-[var(--green-primary)]"
                       />
                       <span className="text-sm text-text-dark">
-                        Sunt de acord cu prelucrarea datelor
+                        Sunt de acord cu prelucrarea datelor personale conform{' '}
+                        <Link to="/politica-confidentialitate" className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark">
+                          Politicii de Confidențialitate
+                        </Link>
                       </span>
                     </label>
 

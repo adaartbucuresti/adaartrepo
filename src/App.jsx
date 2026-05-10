@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
-import { Navigate, Route, Routes, useLocation, useOutlet } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
+import ConsentBanner from './components/ConsentBanner.jsx'
 import { AdminRoute } from './components/ProtectedRoute.jsx'
 import SmoothScroll from './components/SmoothScroll.jsx'
 import HomePage from './pages/HomePage.jsx'
@@ -11,6 +11,9 @@ import ProductDetailPage from './pages/ProductDetailPage.jsx'
 import ConfiguratorPage from './pages/ConfiguratorPage.jsx'
 import AboutPage from './pages/AboutPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
+import PoliticaConfidentialitatePage from './pages/PoliticaConfidentialitatePage.jsx'
+import TermeniConditiiPage from './pages/TermeniConditiiPage.jsx'
+import PoliticaCookiesPage from './pages/PoliticaCookiesPage.jsx'
 import AuthPage from './pages/AuthPage.jsx'
 import MyAccountPage from './pages/MyAccountPage.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
@@ -20,52 +23,14 @@ import AdminCarousel from './pages/admin/AdminCarousel.jsx'
 import AdminTestimonials from './pages/admin/AdminTestimonials.jsx'
 
 function PublicLayout() {
-  const location = useLocation()
-  const outlet = useOutlet()
   return (
     <div className="min-h-dvh bg-cream text-text-dark">
       <Navbar />
       <main className="pt-28">
-        <AnimatedOutlet locationPathname={location.pathname} outlet={outlet} />
+        <Outlet />
       </main>
       <Footer />
     </div>
-  )
-}
-
-function AnimatedOutlet({ locationPathname, outlet }) {
-  const MotionDiv = motion.div
-  const outletRef = useRef(outlet)
-  const [display, setDisplay] = useState(() => ({
-    pathname: locationPathname,
-    outlet,
-  }))
-  const [phase, setPhase] = useState(() =>
-    locationPathname === display.pathname ? 'enter' : 'exit',
-  )
-
-  useEffect(() => {
-    outletRef.current = outlet
-  }, [outlet])
-
-  useEffect(() => {
-    if (locationPathname === display.pathname) return
-    setPhase('exit')
-  }, [locationPathname, display.pathname])
-
-  return (
-    <MotionDiv
-      initial={false}
-      animate={{ opacity: phase === 'exit' ? 0 : 1 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
-      onAnimationComplete={() => {
-        if (phase !== 'exit') return
-        setDisplay({ pathname: locationPathname, outlet: outletRef.current })
-        setPhase('enter')
-      }}
-    >
-      {display.outlet}
-    </MotionDiv>
   )
 }
 
@@ -73,6 +38,7 @@ export default function App() {
   return (
     <>
       <SmoothScroll />
+      <ConsentBanner />
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
@@ -82,6 +48,9 @@ export default function App() {
           <Route path="/cont" element={<MyAccountPage />} />
           <Route path="/despre" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/politica-confidentialitate" element={<PoliticaConfidentialitatePage />} />
+          <Route path="/termeni-conditii" element={<TermeniConditiiPage />} />
+          <Route path="/politica-cookies" element={<PoliticaCookiesPage />} />
         </Route>
 
         <Route

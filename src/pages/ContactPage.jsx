@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Mail, MapPin, Paperclip, Phone, User, X } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -218,18 +219,15 @@ export default function ContactPage() {
                   />
                   <div className="min-w-0">
                     <label htmlFor="gdpr" className="text-sm font-semibold text-text-dark">
-                      Sunt de acord cu prelucrarea datelor personale <span className="text-red-600">*</span>
+                      Sunt de acord cu prelucrarea datelor personale conform{' '}
+                      <Link to="/politica-confidentialitate" className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark">
+                        Politicii de Confidențialitate
+                      </Link>{' '}
+                      <span className="text-red-600">*</span>
                     </label>
                     <div className="mt-1 text-xs text-text-muted">
                       Folosim aceste date doar pentru a răspunde cererii tale.
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => e.preventDefault()}
-                      className="mt-2 inline-flex text-xs font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark"
-                    >
-                      Citește politica GDPR
-                    </button>
                     {!agreed && formError ? <div className="mt-2 text-xs font-semibold text-red-600">Obligatoriu</div> : null}
                   </div>
                 </div>
