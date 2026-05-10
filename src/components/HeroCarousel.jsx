@@ -23,6 +23,7 @@ export default function HeroCarousel() {
   const [slides, setSlides] = useState([])
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(isSupabaseConfigured)
+  const [hovering, setHovering] = useState(false)
 
   const slidesToUse = isSupabaseConfigured ? slides : heroSlides
 
@@ -77,16 +78,21 @@ export default function HeroCarousel() {
 
   useEffect(() => {
     if (slidesToUse.length <= 1) return
+    if (hovering) return
     const id = window.setInterval(() => {
       setIndex((prev) => (prev + 1) % slidesToUse.length)
     }, 7000)
     return () => window.clearInterval(id)
-  }, [slidesToUse.length])
+  }, [slidesToUse.length, hovering])
 
   const titleLines = useMemo(() => (active?.title ? active.title.split('\n') : []), [active?.title])
 
   return (
-    <section className="relative h-[100svh] w-full overflow-hidden bg-cream">
+    <section
+      className="relative h-[100svh] w-full overflow-hidden bg-cream"
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
       {loading ? (
         <>
           <div className="absolute inset-0 bg-warm" />

@@ -70,7 +70,7 @@ export default function HomePage() {
                 Produse recomandate
               </h2>
               <p className="mt-2 text-sm text-text-muted">
-                Inspirație din proiecte populare, configurabile.
+                Alege din toate modelele noastre populare si configureaza exact asa cum doresti
               </p>
             </div>
 

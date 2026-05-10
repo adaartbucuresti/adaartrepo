@@ -41,7 +41,7 @@ export default function Footer() {
           <div className="mt-4 flex flex-col gap-3 text-sm text-text-muted">
             <div className="flex items-start gap-2">
               <Mail className="mt-0.5 h-4 w-4 text-brand-mid" />
-              <span>contact@mobdesign.ro</span>
+              <span>mobdesign.ro@outlook.com</span>
             </div>
             <div className="flex items-start gap-2">
               <Phone className="mt-0.5 h-4 w-4 text-brand-mid" />

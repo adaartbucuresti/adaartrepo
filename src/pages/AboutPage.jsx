@@ -49,15 +49,12 @@ export default function AboutPage() {
 
             <MotionDiv className="lg:col-span-6" variants={fadeUp} initial="hidden" animate="visible">
               <div className="relative overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
-                <div className="absolute left-5 top-5 z-10 inline-flex items-center rounded-full bg-white/85 px-4 py-2 text-xs font-semibold text-text-dark ring-1 ring-border backdrop-blur">
-                  25 de ani pe piață
-                </div>
                 <div className="absolute bottom-5 right-5 z-10 rounded-2xl bg-brand-primary/90 px-4 py-3 text-xs font-semibold text-white shadow-soft backdrop-blur">
                   Calitate, de la schiță la montaj
                 </div>
                 <div className="relative aspect-[16/10]">
                   <img
-                    src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=1600"
+                    src="/about-workshop.png"
                     alt=""
                     className="h-full w-full object-cover"
                     loading="lazy"

@@ -282,7 +282,7 @@ export default function ContactPage() {
                 <Mail className="mt-0.5 h-5 w-5 text-brand-mid" />
                 <div>
                   <div className="font-medium text-text-dark">Email</div>
-                  <div>contact@mobdesign.ro</div>
+                  <div>mobdesign.ro@outlook.com</div>
                 </div>
               </div>
               <div className="rounded-2xl bg-cream p-4 text-xs">
