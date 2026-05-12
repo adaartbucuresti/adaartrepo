@@ -9,11 +9,23 @@ import {
   Square,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ConfiguratorSummary from '../components/ConfiguratorSummary.jsx'
 import { products } from '../data/products.js'
 import { supabase } from '../lib/supabase.js'
+
+const DRAFT_STORAGE_KEY = 'configuratorDraft_v1'
+const ALLOWED_EMAIL_DOMAINS = [
+  'gmail.com',
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'yahoo.com',
+  'icloud.com',
+  'proton.me',
+  'protonmail.com',
+]
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -90,6 +102,14 @@ function mid(min, max) {
   return Math.round((min + max) / 2)
 }
 
+function isAllowedEmail(value) {
+  const v = String(value || '').trim().toLowerCase()
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+  if (!ok) return false
+  const domain = v.split('@')[1] || ''
+  return ALLOWED_EMAIL_DOMAINS.includes(domain)
+}
+
 export default function ConfiguratorPage() {
   const MotionDiv = motion.div
   const [params] = useSearchParams()
@@ -127,6 +147,116 @@ export default function ConfiguratorPage() {
   const [successOpen, setSuccessOpen] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
+
+  const emailAllowed = useMemo(() => isAllowedEmail(email), [email])
+
+  const readDraft = () => {
+    try {
+      const raw = window.sessionStorage.getItem(DRAFT_STORAGE_KEY)
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== 'object') return null
+      return parsed
+    } catch {
+      return null
+    }
+  }
+
+  const saveTimerRef = useRef(0)
+  const hydratedRef = useRef(false)
+
+  useEffect(() => {
+    const draft = readDraft()
+    if (!draft) {
+      hydratedRef.current = true
+      return
+    }
+
+    const nextType =
+      typeof draft.productType === 'string' && dimensionRanges[draft.productType]
+        ? draft.productType
+        : initialType
+
+    const nextRange = dimensionRanges[nextType] || initialRange
+
+    setStep((s) => {
+      const nextStep = clampNumber(Number(draft.step), 1, steps.length)
+      return Number.isFinite(nextStep) ? nextStep : s
+    })
+    setProductType(nextType)
+    setProductName(typeof draft.productName === 'string' ? draft.productName : initialName)
+
+    setWidthCm(clampNumber(Number(draft.widthCm), nextRange.w[0], nextRange.w[1]))
+    setHeightCm(clampNumber(Number(draft.heightCm), nextRange.h[0], nextRange.h[1]))
+    setDepthCm(clampNumber(Number(draft.depthCm), nextRange.d[0], nextRange.d[1]))
+
+    if (typeof draft.material === 'string' && materialOptions.some((m) => m.key === draft.material)) {
+      setMaterial(draft.material)
+    }
+    if (typeof draft.color === 'string' && colorOptions.some((c) => c.key === draft.color)) {
+      setColor(draft.color)
+    }
+
+    if (Array.isArray(draft.extras)) {
+      const allowed = new Set(extrasOptions.map((x) => x.key))
+      setExtras(draft.extras.filter((x) => typeof x === 'string' && allowed.has(x)))
+    }
+
+    setFullName(typeof draft.fullName === 'string' ? draft.fullName : '')
+    setPhone(typeof draft.phone === 'string' ? draft.phone : '')
+    setEmail(typeof draft.email === 'string' ? draft.email : '')
+    setNotes(typeof draft.notes === 'string' ? draft.notes : '')
+    setConsent(Boolean(draft.consent))
+    hydratedRef.current = true
+  }, [])
+
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      try {
+        const payload = {
+          step,
+          productType,
+          productName,
+          widthCm,
+          heightCm,
+          depthCm,
+          material,
+          color,
+          extras,
+          fullName,
+          phone,
+          email,
+          notes,
+          consent,
+          savedAt: Date.now(),
+        }
+        window.sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload))
+      } catch {
+      }
+    }, 200)
+
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = 0
+    }
+  }, [
+    step,
+    productType,
+    productName,
+    widthCm,
+    heightCm,
+    depthCm,
+    material,
+    color,
+    extras,
+    fullName,
+    phone,
+    email,
+    notes,
+    consent,
+  ])
 
   const materialExtra = useMemo(() => materialOptions.find((m) => m.key === material)?.extra || 0, [material])
   const colorExtra = useMemo(() => colorOptions.find((c) => c.key === color)?.extra || 0, [color])
@@ -198,10 +328,26 @@ export default function ConfiguratorPage() {
   const submit = async (e) => {
     e.preventDefault()
     setSubmitError('')
-    if (!consent) return
-    if (!fullName.trim()) return
-    if (!phone.trim()) return
-    if (!email.trim()) return
+    if (!consent) {
+      setSubmitError('Confirmă acordul GDPR pentru a trimite cererea.')
+      return
+    }
+    if (!fullName.trim()) {
+      setSubmitError('Introdu numele complet.')
+      return
+    }
+    if (!phone.trim()) {
+      setSubmitError('Introdu numărul de telefon.')
+      return
+    }
+    if (!email.trim()) {
+      setSubmitError('Introdu adresa de email.')
+      return
+    }
+    if (!emailAllowed) {
+      setSubmitError('Email-ul trebuie să fie de tip @gmail.com, @outlook.com etc.')
+      return
+    }
 
     setSubmitLoading(true)
     const { error } = await supabase.from('configurator_requests').insert({
@@ -227,6 +373,10 @@ export default function ConfiguratorPage() {
     }
 
     setSubmitLoading(false)
+    try {
+      window.sessionStorage.removeItem(DRAFT_STORAGE_KEY)
+    } catch {
+    }
     setSuccessOpen(true)
   }
 
@@ -511,8 +661,12 @@ export default function ConfiguratorPage() {
                         </label>
                         <input
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
+                          onChange={(e) => setPhone(String(e.target.value || '').replace(/\D+/g, ''))}
+                          inputMode="numeric"
+                          autoComplete="tel"
+                          pattern="[0-9]*"
                           className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+                          placeholder="07xx xxx xxx"
                         />
                       </div>
                       <div>
@@ -520,8 +674,16 @@ export default function ConfiguratorPage() {
                         <input
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
+                          inputMode="email"
+                          autoComplete="email"
                           className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+                          placeholder="email@gmail.com"
                         />
+                        {email.trim() && !emailAllowed ? (
+                          <div className="mt-2 text-xs font-semibold text-red-600">
+                            Folosește un email de tip @gmail.com, @outlook.com, @yahoo.com etc.
+                          </div>
+                        ) : null}
                       </div>
                       <div className="md:col-span-2">
                         <label className="text-xs font-medium text-text-muted">
@@ -554,7 +716,7 @@ export default function ConfiguratorPage() {
                     <button
                       type="submit"
                       className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid disabled:opacity-50"
-                      disabled={!consent || submitLoading}
+                      disabled={!consent || submitLoading || !fullName.trim() || !phone.trim() || !emailAllowed}
                     >
                       {submitLoading ? 'Se trimite…' : 'Trimite cererea de ofertă'}
                     </button>
