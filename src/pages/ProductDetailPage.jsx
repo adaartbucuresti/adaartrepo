@@ -173,7 +173,7 @@ export default function ProductDetailPage() {
             </div>
 
             <Link
-              to={`/configurator?produs=${encodeURIComponent(product.name)}`}
+              to={`/configurator?produsId=${encodeURIComponent(product.id)}&produs=${encodeURIComponent(product.name)}`}
               className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid"
             >
               Configurează acest produs

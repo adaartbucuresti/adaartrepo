@@ -40,7 +40,7 @@ export default function ProductCard({ product }) {
         <div className="mt-2 text-sm font-bold text-brand-dark">{product.priceLabel}</div>
 
         <Link
-          to={`/configurator?produs=${encodeURIComponent(product.name)}`}
+          to={`/configurator?produsId=${encodeURIComponent(product.id)}&produs=${encodeURIComponent(product.name)}`}
           className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-brand-dark py-4 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-brand-primary hover:shadow-lg active:scale-[0.98]"
         >
           Personalizează

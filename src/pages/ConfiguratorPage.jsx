@@ -1,19 +1,24 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  Bath,
   BedDouble,
   BookOpen,
   Briefcase,
   DoorClosed,
+  Home,
   Check,
   Layers,
+  Plus,
   Square,
+  Tv,
+  Utensils,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ConfiguratorSummary from '../components/ConfiguratorSummary.jsx'
 import { products } from '../data/products.js'
-import { supabase } from '../lib/supabase.js'
+import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const DRAFT_STORAGE_KEY = 'configuratorDraft_v1'
 const ALLOWED_EMAIL_DOMAINS = [
@@ -33,30 +38,36 @@ const fadeUp = {
 }
 
 const productTypeOptions = [
-  { key: 'Dulap', icon: DoorClosed },
-  { key: 'Pat', icon: BedDouble },
-  { key: 'Birou', icon: Briefcase },
-  { key: 'Bibliotecă', icon: BookOpen },
-  { key: 'Comodă', icon: Layers },
-  { key: 'Noptieră', icon: Square },
+  { key: 'Bucătărie la comandă', icon: Utensils },
+  { key: 'Dressing / Dulap', icon: DoorClosed },
+  { key: 'Mobilă TV / Perete TV', icon: Tv },
+  { key: 'Dormitor (pat, noptiere, comode)', icon: BedDouble },
+  { key: 'Hol (pantofar, cuier, oglindă, dulap)', icon: Home },
+  { key: 'Baie (mască chiuvetă, dulapuri)', icon: Bath },
+  { key: 'Birou / Home office', icon: Briefcase },
+  { key: 'Bibliotecă / Rafturi', icon: BookOpen },
+  { key: 'Alt produs', icon: Plus },
 ]
 
 const categoryToType = {
-  Dulapuri: 'Dulap',
-  Paturi: 'Pat',
-  Birouri: 'Birou',
-  Biblioteci: 'Bibliotecă',
-  Comode: 'Comodă',
-  Noptiere: 'Noptieră',
+  Dulapuri: 'Dressing / Dulap',
+  Paturi: 'Dormitor (pat, noptiere, comode)',
+  Birouri: 'Birou / Home office',
+  Biblioteci: 'Bibliotecă / Rafturi',
+  Comode: 'Dormitor (pat, noptiere, comode)',
+  Noptiere: 'Dormitor (pat, noptiere, comode)',
 }
 
 const dimensionRanges = {
-  Dulap: { w: [120, 320], h: [180, 280], d: [45, 80] },
-  Pat: { w: [140, 220], h: [90, 140], d: [190, 240] },
-  Birou: { w: [90, 200], h: [70, 90], d: [50, 90] },
-  'Bibliotecă': { w: [80, 260], h: [160, 280], d: [25, 45] },
-  'Comodă': { w: [80, 200], h: [70, 120], d: [35, 60] },
-  'Noptieră': { w: [35, 70], h: [40, 75], d: [30, 55] },
+  'Bucătărie la comandă': { w: [180, 650], h: [180, 270], d: [45, 70] },
+  'Dressing / Dulap': { w: [120, 360], h: [180, 280], d: [45, 80] },
+  'Mobilă TV / Perete TV': { w: [120, 420], h: [40, 260], d: [30, 65] },
+  'Dormitor (pat, noptiere, comode)': { w: [120, 260], h: [40, 180], d: [40, 240] },
+  'Hol (pantofar, cuier, oglindă, dulap)': { w: [60, 280], h: [80, 280], d: [25, 80] },
+  'Baie (mască chiuvetă, dulapuri)': { w: [40, 220], h: [40, 240], d: [25, 70] },
+  'Birou / Home office': { w: [90, 220], h: [70, 95], d: [50, 100] },
+  'Bibliotecă / Rafturi': { w: [80, 300], h: [160, 290], d: [25, 55] },
+  'Alt produs': { w: [40, 650], h: [40, 320], d: [20, 120] },
 }
 
 const materialOptions = [
@@ -110,24 +121,75 @@ function isAllowedEmail(value) {
   return ALLOWED_EMAIL_DOMAINS.includes(domain)
 }
 
+function normalizeKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+}
+
 export default function ConfiguratorPage() {
   const MotionDiv = motion.div
   const [params] = useSearchParams()
   const preselectedName = params.get('produs') || ''
+  const preselectedId = params.get('produsId') || ''
+  const [remotePreselected, setRemotePreselected] = useState(null)
 
   const preselectedProduct = useMemo(() => {
+    if (remotePreselected) return remotePreselected
+    if (preselectedId) return products.find((p) => String(p.id) === String(preselectedId)) || null
     if (!preselectedName) return null
-    return products.find((p) => p.name.toLowerCase() === preselectedName.toLowerCase()) || null
-  }, [preselectedName])
+    const needle = normalizeKey(preselectedName)
+    return products.find((p) => normalizeKey(p.name) === needle) || null
+  }, [preselectedId, preselectedName, remotePreselected])
+
+  useEffect(() => {
+    let alive = true
+    setRemotePreselected(null)
+    if (!preselectedId || !isSupabaseConfigured) return () => { alive = false }
+    const local = products.find((p) => String(p.id) === String(preselectedId)) || null
+    if (local) return () => { alive = false }
+
+    const mapProduct = (p) => {
+      const imagesArr = Array.isArray(p.images) ? p.images : []
+      return {
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        priceLabel: p.price_label || `de la ${p.price} RON`,
+        description: p.description || '',
+        badge: p.badge || '',
+        image: imagesArr[0] || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200',
+        images: imagesArr,
+      }
+    }
+
+    supabase
+      .from('products')
+      .select('*')
+      .eq('id', preselectedId)
+      .single()
+      .then(({ data, error }) => {
+        if (!alive) return
+        if (!error && data) setRemotePreselected(mapProduct(data))
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [preselectedId])
 
   const [step, setStep] = useState(1)
   const mappedType = preselectedProduct ? categoryToType[preselectedProduct.category] : null
-  const initialType = mappedType || 'Dulap'
-  const initialName = preselectedProduct?.name || preselectedName
+  const initialType = mappedType || 'Dressing / Dulap'
+  const initialName = preselectedProduct?.name || (preselectedName ? preselectedName : '')
   const initialRange = dimensionRanges[initialType]
 
   const [productType, setProductType] = useState(initialType)
   const [productName, setProductName] = useState(initialName)
+  const [otherDescription, setOtherDescription] = useState('')
 
   const range = dimensionRanges[productType]
   const [widthCm, setWidthCm] = useState(mid(initialRange.w[0], initialRange.w[1]))
@@ -147,6 +209,7 @@ export default function ConfiguratorPage() {
   const [successOpen, setSuccessOpen] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [stepError, setStepError] = useState('')
 
   const emailAllowed = useMemo(() => isAllowedEmail(email), [email])
 
@@ -164,27 +227,80 @@ export default function ConfiguratorPage() {
 
   const saveTimerRef = useRef(0)
   const hydratedRef = useRef(false)
+  const lastHydratedKeyRef = useRef('')
+  const appliedPreselectKeyRef = useRef('')
+
+  const contextKey = useMemo(() => {
+    if (preselectedProduct?.id != null) return `id:${preselectedProduct.id}`
+    if (preselectedId) return `id:${preselectedId}`
+    if (preselectedName) return `name:${normalizeKey(preselectedName)}`
+    return 'none'
+  }, [preselectedId, preselectedName, preselectedProduct?.id])
 
   useEffect(() => {
     const draft = readDraft()
+    if (lastHydratedKeyRef.current === contextKey) return
+    lastHydratedKeyRef.current = contextKey
+    hydratedRef.current = false
+
+    const mapped = preselectedProduct ? categoryToType[preselectedProduct.category] : null
+    const nextInitialType = mapped || 'Dressing / Dulap'
+    const nextInitialRange = dimensionRanges[nextInitialType] || dimensionRanges['Dressing / Dulap']
+    const nextInitialName = preselectedProduct?.name || (preselectedName ? preselectedName : '')
+
+    setStep(1)
+    setProductType(nextInitialType)
+    setProductName(nextInitialName)
+    setOtherDescription('')
+    setWidthCm(mid(nextInitialRange.w[0], nextInitialRange.w[1]))
+    setHeightCm(mid(nextInitialRange.h[0], nextInitialRange.h[1]))
+    setDepthCm(mid(nextInitialRange.d[0], nextInitialRange.d[1]))
+    setMaterial(materialOptions[0].key)
+    setColor(colorOptions[0].key)
+    setExtras([])
+    setNotes('')
+    setConsent(false)
+
     if (!draft) {
       hydratedRef.current = true
       return
     }
 
-    const nextType =
-      typeof draft.productType === 'string' && dimensionRanges[draft.productType]
-        ? draft.productType
-        : initialType
+    const draftKey = typeof draft.contextKey === 'string' ? draft.contextKey : ''
+    const currentKey = contextKey
+    const draftName = typeof draft.productName === 'string' ? normalizeKey(draft.productName) : ''
+    const currentName = preselectedProduct?.name
+      ? normalizeKey(preselectedProduct.name)
+      : preselectedName
+        ? normalizeKey(preselectedName)
+        : ''
+    const isMismatch =
+      (draftKey && draftKey !== currentKey) ||
+      (!draftKey && currentKey !== 'none' && draftName && currentName && draftName !== currentName)
 
-    const nextRange = dimensionRanges[nextType] || initialRange
+    setFullName(typeof draft.fullName === 'string' ? draft.fullName : '')
+    setPhone(typeof draft.phone === 'string' ? draft.phone : '')
+    setEmail(typeof draft.email === 'string' ? draft.email : '')
+
+    if (isMismatch) {
+      hydratedRef.current = true
+      return
+    }
 
     setStep((s) => {
       const nextStep = clampNumber(Number(draft.step), 1, steps.length)
       return Number.isFinite(nextStep) ? nextStep : s
     })
+
+    const nextType =
+      typeof draft.productType === 'string' && dimensionRanges[draft.productType]
+        ? draft.productType
+        : nextInitialType
+
+    const nextRange = dimensionRanges[nextType] || nextInitialRange
+
     setProductType(nextType)
-    setProductName(typeof draft.productName === 'string' ? draft.productName : initialName)
+    setProductName(typeof draft.productName === 'string' ? draft.productName : nextInitialName)
 
     setWidthCm(clampNumber(Number(draft.widthCm), nextRange.w[0], nextRange.w[1]))
     setHeightCm(clampNumber(Number(draft.heightCm), nextRange.h[0], nextRange.h[1]))
@@ -202,13 +318,26 @@ export default function ConfiguratorPage() {
       setExtras(draft.extras.filter((x) => typeof x === 'string' && allowed.has(x)))
     }
 
-    setFullName(typeof draft.fullName === 'string' ? draft.fullName : '')
-    setPhone(typeof draft.phone === 'string' ? draft.phone : '')
-    setEmail(typeof draft.email === 'string' ? draft.email : '')
     setNotes(typeof draft.notes === 'string' ? draft.notes : '')
     setConsent(Boolean(draft.consent))
+    setOtherDescription(typeof draft.otherDescription === 'string' ? draft.otherDescription : '')
     hydratedRef.current = true
-  }, [])
+  }, [contextKey, preselectedName, preselectedProduct])
+
+  useEffect(() => {
+    if (!preselectedProduct) return
+    const key = `id:${preselectedProduct.id}`
+    if (appliedPreselectKeyRef.current === key) return
+    appliedPreselectKeyRef.current = key
+    const mapped = categoryToType[preselectedProduct.category] || 'Dressing / Dulap'
+    if (!dimensionRanges[mapped]) return
+    setProductName(preselectedProduct.name)
+    setProductType(mapped)
+    const nextRange = dimensionRanges[mapped]
+    setWidthCm((v) => clampNumber(v, nextRange.w[0], nextRange.w[1]))
+    setHeightCm((v) => clampNumber(v, nextRange.h[0], nextRange.h[1]))
+    setDepthCm((v) => clampNumber(v, nextRange.d[0], nextRange.d[1]))
+  }, [preselectedProduct])
 
   useEffect(() => {
     if (!hydratedRef.current) return
@@ -216,6 +345,7 @@ export default function ConfiguratorPage() {
     saveTimerRef.current = window.setTimeout(() => {
       try {
         const payload = {
+          contextKey,
           step,
           productType,
           productName,
@@ -230,6 +360,7 @@ export default function ConfiguratorPage() {
           email,
           notes,
           consent,
+          otherDescription,
           savedAt: Date.now(),
         }
         window.sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload))
@@ -242,6 +373,7 @@ export default function ConfiguratorPage() {
       saveTimerRef.current = 0
     }
   }, [
+    contextKey,
     step,
     productType,
     productName,
@@ -256,6 +388,7 @@ export default function ConfiguratorPage() {
     email,
     notes,
     consent,
+    otherDescription,
   ])
 
   const materialExtra = useMemo(() => materialOptions.find((m) => m.key === material)?.extra || 0, [material])
@@ -310,6 +443,10 @@ export default function ConfiguratorPage() {
   const selectProductType = (nextType) => {
     const nextRange = dimensionRanges[nextType]
     setProductType(nextType)
+    if (nextType === 'Alt produs') {
+      setProductName('')
+      setOtherDescription('')
+    }
     setWidthCm((v) => clampNumber(v, nextRange.w[0], nextRange.w[1]))
     setHeightCm((v) => clampNumber(v, nextRange.h[0], nextRange.h[1]))
     setDepthCm((v) => clampNumber(v, nextRange.d[0], nextRange.d[1]))
@@ -322,12 +459,35 @@ export default function ConfiguratorPage() {
     })
   }
 
-  const goNext = () => setStep((s) => Math.min(steps.length, s + 1))
+  const goNext = () => {
+    if (step === 1 && productType === 'Alt produs') {
+      if (!productName.trim()) {
+        setStepError('Introdu titlul produsului.')
+        return
+      }
+      if (!otherDescription.trim()) {
+        setStepError('Descrie ce îți dorești.')
+        return
+      }
+    }
+    setStepError('')
+    setStep((s) => Math.min(steps.length, s + 1))
+  }
   const goBack = () => setStep((s) => Math.max(1, s - 1))
 
   const submit = async (e) => {
     e.preventDefault()
     setSubmitError('')
+    if (productType === 'Alt produs') {
+      if (!productName.trim()) {
+        setSubmitError('Introdu titlul produsului.')
+        return
+      }
+      if (!otherDescription.trim()) {
+        setSubmitError('Descrie ce îți dorești.')
+        return
+      }
+    }
     if (!consent) {
       setSubmitError('Confirmă acordul GDPR pentru a trimite cererea.')
       return
@@ -349,12 +509,19 @@ export default function ConfiguratorPage() {
       return
     }
 
+    const notesParts = []
+    if (productType === 'Alt produs') {
+      notesParts.push(`Alt produs: ${productName.trim()}\n${otherDescription.trim()}`)
+    }
+    if (notes.trim()) notesParts.push(notes.trim())
+    const combinedNotes = notesParts.length ? notesParts.join('\n\n') : null
+
     setSubmitLoading(true)
     const { error } = await supabase.from('configurator_requests').insert({
       client_name: fullName.trim(),
       client_email: email.trim(),
       client_phone: phone.trim(),
-      client_notes: notes.trim() || null,
+      client_notes: combinedNotes,
       product_type: productType,
       width_cm: widthCm,
       height_cm: heightCm,
@@ -425,18 +592,21 @@ export default function ConfiguratorPage() {
               <div className="mt-8 space-y-10">
                 {step === 1 ? (
                   <div>
-                    <div className="text-sm font-semibold text-text-dark">Tip produs</div>
+                    <div className="text-sm font-semibold text-text-dark">Tipuri de produse (cele mai cumpărate)</div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       {productTypeOptions.map((o) => {
                         const Icon = o.icon
                         const active = o.key === productType
+                        const match = String(o.key).match(/^(.+?)\s*\((.+)\)\s*$/)
+                        const title = match ? match[1].trim() : o.key
+                        const subtitle = match ? `(${match[2].trim()})` : ''
                         return (
                           <button
                             key={o.key}
                             type="button"
                             onClick={() => selectProductType(o.key)}
                             className={[
-                              'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                              'flex items-start gap-3 rounded-2xl border p-4 text-left transition',
                               active
                                 ? 'border-brand-primary bg-brand-light'
                                 : 'border-border bg-white hover:bg-warm',
@@ -445,25 +615,46 @@ export default function ConfiguratorPage() {
                             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-brand-dark ring-1 ring-border">
                               <Icon className="h-5 w-5" />
                             </span>
-                            <span className="text-sm font-semibold text-text-dark">
-                              {o.key}
-                            </span>
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold text-text-dark">{title}</div>
+                              {subtitle ? <div className="mt-0.5 text-xs font-semibold text-brand-mid">{subtitle}</div> : null}
+                            </div>
                           </button>
                         )
                       })}
                     </div>
 
-                    <div className="mt-5">
-                      <label className="text-xs font-medium text-text-muted">
-                        Nume produs (opțional)
-                      </label>
-                      <input
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
-                        placeholder="Ex: Dulap Aura"
-                        className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-dark outline-none ring-brand-primary/30 focus:ring-2"
-                      />
-                    </div>
+                    {productType === 'Alt produs' ? (
+                      <div className="mt-6 grid gap-4">
+                        <div>
+                          <label className="text-xs font-medium text-text-muted">Titlu produs</label>
+                          <input
+                            value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            placeholder="Ex: Masă extensibilă"
+                            className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-dark outline-none ring-brand-primary/30 focus:ring-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-text-muted">Descrie ce îți dorești</label>
+                          <textarea
+                            value={otherDescription}
+                            onChange={(e) => setOtherDescription(e.target.value)}
+                            rows={4}
+                            placeholder="Dimensiuni, materiale, culori, schiță, orice detaliu util…"
+                            className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-dark outline-none ring-brand-primary/30 focus:ring-2"
+                          />
+                        </div>
+                        {stepError ? <div className="text-xs font-semibold text-red-600">{stepError}</div> : null}
+                      </div>
+                    ) : (
+                      productName ? (
+                        <div className="mt-6 rounded-2xl border border-brand-primary/15 bg-brand-light p-5">
+                          <div className="text-xs font-semibold text-brand-dark">Nume produs</div>
+                          <div className="mt-2 text-sm font-semibold text-text-dark">{productName}</div>
+                        </div>
+                      ) : null
+                    )}
                   </div>
                 ) : null}
 
