@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ConfiguratorSummary from '../components/ConfiguratorSummary.jsx'
 import { products } from '../data/products.js'
+import { getColorOption, getColorsForMaterial, isColorValidForMaterial } from '../lib/colors.js'
 import { DEFAULT_MATERIAL_KEY, MATERIAL_PRICING, calcEstimatedPriceRon, calcLinearMeters, getMaterialPricing } from '../lib/pricing.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
@@ -72,15 +73,6 @@ const dimensionRanges = {
 }
 
 const materialOptions = MATERIAL_PRICING
-
-const colorOptions = [
-  { key: 'Alb mat', extra: 0, swatch: '#f3f3f1' },
-  { key: 'Antracit', extra: 0, swatch: '#303235' },
-  { key: 'Stejar natural', extra: 150, swatch: '#b9935a' },
-  { key: 'Verde închis', extra: 200, swatch: '#085041' },
-  { key: 'Gri cald', extra: 0, swatch: '#a9a39b' },
-  { key: 'Personalizat', extra: 300, swatch: '#1d9e75' },
-]
 
 const extrasOptions = [
   { key: 'Iluminat interior LED', extra: 350 },
@@ -193,7 +185,7 @@ export default function ConfiguratorPage() {
   const [depthCm, setDepthCm] = useState(mid(initialRange.d[0], initialRange.d[1]))
 
   const [material, setMaterial] = useState(DEFAULT_MATERIAL_KEY)
-  const [color, setColor] = useState(colorOptions[0].key)
+  const [colorId, setColorId] = useState('')
   const [extras, setExtras] = useState([])
 
   const [fullName, setFullName] = useState('')
@@ -252,7 +244,7 @@ export default function ConfiguratorPage() {
     setHeightCm(mid(nextInitialRange.h[0], nextInitialRange.h[1]))
     setDepthCm(mid(nextInitialRange.d[0], nextInitialRange.d[1]))
     setMaterial(DEFAULT_MATERIAL_KEY)
-    setColor(colorOptions[0].key)
+    setColorId('')
     setExtras([])
     setNotes('')
     setConsent(false)
@@ -302,12 +294,19 @@ export default function ConfiguratorPage() {
     setHeightCm(clampNumber(Number(draft.heightCm), nextRange.h[0], nextRange.h[1]))
     setDepthCm(clampNumber(Number(draft.depthCm), nextRange.d[0], nextRange.d[1]))
 
-    if (typeof draft.material === 'string' && materialOptions.some((m) => m.key === draft.material)) {
-      setMaterial(draft.material)
-    }
-    if (typeof draft.color === 'string' && colorOptions.some((c) => c.key === draft.color)) {
-      setColor(draft.color)
-    }
+    const draftMaterial =
+      typeof draft.material === 'string' && materialOptions.some((m) => m.key === draft.material)
+        ? draft.material
+        : DEFAULT_MATERIAL_KEY
+    setMaterial(draftMaterial)
+
+    const maybeColorId =
+      typeof draft.colorId === 'string'
+        ? draft.colorId
+        : typeof draft.color === 'string'
+          ? draft.color
+          : ''
+    setColorId(isColorValidForMaterial(draftMaterial, maybeColorId) ? maybeColorId : '')
 
     if (Array.isArray(draft.extras)) {
       const allowed = new Set(extrasOptions.map((x) => x.key))
@@ -329,6 +328,7 @@ export default function ConfiguratorPage() {
     if (!dimensionRanges[mapped]) return
     setProductName(preselectedProduct.name)
     setProductType(mapped)
+    setColorId('')
     const nextRange = dimensionRanges[mapped]
     setWidthCm((v) => clampNumber(v, nextRange.w[0], nextRange.w[1]))
     setHeightCm((v) => clampNumber(v, nextRange.h[0], nextRange.h[1]))
@@ -348,8 +348,10 @@ export default function ConfiguratorPage() {
           widthCm,
           heightCm,
           depthCm,
+          materialId: material,
           material,
-          color,
+          colorId,
+          colorLabel: selectedColor?.label || undefined,
           extras,
           fullName,
           phone,
@@ -377,7 +379,7 @@ export default function ConfiguratorPage() {
     heightCm,
     depthCm,
     material,
-    color,
+    colorId,
     extras,
     fullName,
     phone,
@@ -388,11 +390,19 @@ export default function ConfiguratorPage() {
   ])
 
   const selectedMaterial = useMemo(() => getMaterialPricing(material), [material])
+  const selectedColor = useMemo(() => getColorOption(material, colorId), [material, colorId])
+  const colorsForMaterial = useMemo(() => getColorsForMaterial(material), [material])
   const linearMeters = useMemo(() => calcLinearMeters(widthCm), [widthCm])
   const estimatedPrice = useMemo(
     () => calcEstimatedPriceRon(widthCm, selectedMaterial?.pricePerMl),
     [widthCm, selectedMaterial?.pricePerMl],
   )
+
+  useEffect(() => {
+    if (!colorId) return
+    if (isColorValidForMaterial(material, colorId)) return
+    setColorId('')
+  }, [material, colorId])
 
   const summary = useMemo(() => {
     const dims = `${widthCm}×${heightCm}×${depthCm} cm`
@@ -402,7 +412,8 @@ export default function ConfiguratorPage() {
       productName: productName || undefined,
       dimensionsLabel: dims,
       materialLabel: selectedMaterial ? `${selectedMaterial.key} — ${selectedMaterial.pricePerMl} RON/ml` : material,
-      colorLabel: color,
+      colorId: colorId || undefined,
+      colorLabel: selectedColor?.label || undefined,
       extrasLabel,
       fullName: fullName || undefined,
       phone: phone || undefined,
@@ -416,7 +427,8 @@ export default function ConfiguratorPage() {
     depthCm,
     material,
     selectedMaterial,
-    color,
+    colorId,
+    selectedColor,
     extras,
     fullName,
     phone,
@@ -454,6 +466,10 @@ export default function ConfiguratorPage() {
         setStepError('Descrie ce îți dorești.')
         return
       }
+    }
+    if (step === 4 && !colorId) {
+      setStepError('Alege culoarea/finisajul pentru a continua.')
+      return
     }
     setStepError('')
     setStep((s) => Math.min(steps.length, s + 1))
@@ -493,6 +509,10 @@ export default function ConfiguratorPage() {
       setSubmitError('Email-ul trebuie să fie de tip @gmail.com, @outlook.com etc.')
       return
     }
+    if (!colorId || !selectedColor) {
+      setSubmitError('Alege culoarea/finisajul pentru a continua.')
+      return
+    }
 
     const notesParts = []
     if (productType === 'Alt produs') {
@@ -512,7 +532,7 @@ export default function ConfiguratorPage() {
       height_cm: heightCm,
       depth_cm: depthCm,
       material,
-      color,
+      color: selectedColor.label,
       extras,
       estimated_price: estimatedPrice,
       status: 'nou',
@@ -750,32 +770,45 @@ export default function ConfiguratorPage() {
                   <div>
                     <div className="text-sm font-semibold text-text-dark">Culoare / Finisaj</div>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {colorOptions.map((c) => {
-                        const active = c.key === color
+                      {colorsForMaterial.map((c) => {
+                        const active = c.id === colorId
+                        const isOther = c.id === 'other_color'
                         return (
                           <button
-                            key={c.key}
+                            key={c.id}
                             type="button"
-                            onClick={() => setColor(c.key)}
-                            className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4 text-left transition hover:bg-warm"
+                            onClick={() => {
+                              setColorId(c.id)
+                              setStepError('')
+                            }}
+                            className={[
+                              'flex items-center gap-3 rounded-2xl border bg-white p-4 text-left transition hover:bg-warm',
+                              active ? 'border-brand-primary bg-brand-light' : 'border-border',
+                              isOther ? 'border-dashed' : '',
+                            ].join(' ')}
                           >
-                            <span
-                              className={[
-                                'h-12 w-12 rounded-full ring-1 ring-border',
-                                active ? 'ring-2 ring-brand-primary' : '',
-                              ].join(' ')}
-                              style={{ background: c.swatch }}
-                            />
+                            {isOther ? (
+                              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cream ring-1 ring-border">
+                                <Plus className="h-5 w-5 text-brand-mid" />
+                              </span>
+                            ) : (
+                              <span
+                                className={[
+                                  'h-12 w-12 rounded-full ring-1 ring-border',
+                                  active ? 'ring-2 ring-brand-primary' : '',
+                                ].join(' ')}
+                                style={{ background: c.hex }}
+                              />
+                            )}
                             <div className="min-w-0">
-                              <div className="text-sm font-semibold text-text-dark">{c.key}</div>
-                              <div className="text-xs text-text-muted">
-                                {c.extra ? `+${c.extra} RON` : 'Standard'}
-                              </div>
+                              <div className="text-sm font-semibold text-text-dark">{c.label}</div>
+                              {isOther ? <div className="text-xs text-text-muted">La cerere</div> : null}
                             </div>
                           </button>
                         )
                       })}
                     </div>
+                    {stepError && step === 4 ? <div className="mt-3 text-xs font-semibold text-red-600">{stepError}</div> : null}
                   </div>
                 ) : null}
 
@@ -917,7 +950,7 @@ export default function ConfiguratorPage() {
                 <button
                   type="button"
                   onClick={goNext}
-                  disabled={step === steps.length}
+                  disabled={step === steps.length || (step === 4 && !colorId)}
                   className="inline-flex items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-medium text-white transition hover:bg-brand-mid disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Continuă
