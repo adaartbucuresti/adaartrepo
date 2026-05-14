@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ConfiguratorSummary from '../components/ConfiguratorSummary.jsx'
 import { products } from '../data/products.js'
+import { DEFAULT_MATERIAL_KEY, MATERIAL_PRICING, calcEstimatedPriceRon, calcLinearMeters, getMaterialPricing } from '../lib/pricing.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const DRAFT_STORAGE_KEY = 'configuratorDraft_v1'
@@ -59,23 +60,18 @@ const categoryToType = {
 }
 
 const dimensionRanges = {
-  'Bucătărie la comandă': { w: [180, 650], h: [180, 270], d: [45, 70] },
-  'Dressing / Dulap': { w: [120, 360], h: [180, 280], d: [45, 80] },
-  'Mobilă TV / Perete TV': { w: [120, 420], h: [40, 260], d: [30, 65] },
-  'Dormitor (pat, noptiere, comode)': { w: [120, 260], h: [40, 180], d: [40, 240] },
-  'Hol (pantofar, cuier, oglindă, dulap)': { w: [60, 280], h: [80, 280], d: [25, 80] },
-  'Baie (mască chiuvetă, dulapuri)': { w: [40, 220], h: [40, 240], d: [25, 70] },
-  'Birou / Home office': { w: [90, 220], h: [70, 95], d: [50, 100] },
-  'Bibliotecă / Rafturi': { w: [80, 300], h: [160, 290], d: [25, 55] },
-  'Alt produs': { w: [40, 650], h: [40, 320], d: [20, 120] },
+  'Bucătărie la comandă': { w: [100, 800], h: [80, 300], d: [30, 100] },
+  'Dressing / Dulap': { w: [50, 500], h: [100, 300], d: [30, 100] },
+  'Mobilă TV / Perete TV': { w: [60, 500], h: [30, 300], d: [20, 80] },
+  'Dormitor (pat, noptiere, comode)': { w: [30, 300], h: [30, 250], d: [25, 250] },
+  'Hol (pantofar, cuier, oglindă, dulap)': { w: [30, 400], h: [40, 300], d: [15, 100] },
+  'Baie (mască chiuvetă, dulapuri)': { w: [30, 300], h: [30, 300], d: [15, 100] },
+  'Birou / Home office': { w: [50, 400], h: [50, 150], d: [30, 120] },
+  'Bibliotecă / Rafturi': { w: [30, 500], h: [40, 350], d: [15, 80] },
+  'Alt produs': { w: [20, 800], h: [20, 400], d: [10, 200] },
 }
 
-const materialOptions = [
-  { key: 'PAL melaminat', extra: 0, swatch: '#c8b59a' },
-  { key: 'MDF vopsit', extra: 400, swatch: '#e7e7e2' },
-  { key: 'Lemn masiv stejar', extra: 1200, swatch: '#c7a16b' },
-  { key: 'Lemn masiv nuc', extra: 1800, swatch: '#6a4b36' },
-]
+const materialOptions = MATERIAL_PRICING
 
 const colorOptions = [
   { key: 'Alb mat', extra: 0, swatch: '#f3f3f1' },
@@ -196,7 +192,7 @@ export default function ConfiguratorPage() {
   const [heightCm, setHeightCm] = useState(mid(initialRange.h[0], initialRange.h[1]))
   const [depthCm, setDepthCm] = useState(mid(initialRange.d[0], initialRange.d[1]))
 
-  const [material, setMaterial] = useState(materialOptions[0].key)
+  const [material, setMaterial] = useState(DEFAULT_MATERIAL_KEY)
   const [color, setColor] = useState(colorOptions[0].key)
   const [extras, setExtras] = useState([])
 
@@ -255,7 +251,7 @@ export default function ConfiguratorPage() {
     setWidthCm(mid(nextInitialRange.w[0], nextInitialRange.w[1]))
     setHeightCm(mid(nextInitialRange.h[0], nextInitialRange.h[1]))
     setDepthCm(mid(nextInitialRange.d[0], nextInitialRange.d[1]))
-    setMaterial(materialOptions[0].key)
+    setMaterial(DEFAULT_MATERIAL_KEY)
     setColor(colorOptions[0].key)
     setExtras([])
     setNotes('')
@@ -391,22 +387,12 @@ export default function ConfiguratorPage() {
     otherDescription,
   ])
 
-  const materialExtra = useMemo(() => materialOptions.find((m) => m.key === material)?.extra || 0, [material])
-  const colorExtra = useMemo(() => colorOptions.find((c) => c.key === color)?.extra || 0, [color])
-  const extrasTotal = useMemo(() => extras.reduce((sum, k) => sum + (extrasOptions.find((e) => e.key === k)?.extra || 0), 0), [extras])
-
-  const base = useMemo(() => {
-    const w = Number(widthCm) || 0
-    const h = Number(heightCm) || 0
-    const d = Number(depthCm) || 0
-    const raw = ((w * h * d) / 1000) * 1.6
-    return Math.max(0, raw)
-  }, [widthCm, heightCm, depthCm])
-
-  const estimatedPrice = useMemo(() => {
-    const total = base + materialExtra + colorExtra + extrasTotal
-    return Math.round(total / 10) * 10
-  }, [base, materialExtra, colorExtra, extrasTotal])
+  const selectedMaterial = useMemo(() => getMaterialPricing(material), [material])
+  const linearMeters = useMemo(() => calcLinearMeters(widthCm), [widthCm])
+  const estimatedPrice = useMemo(
+    () => calcEstimatedPriceRon(widthCm, selectedMaterial?.pricePerMl),
+    [widthCm, selectedMaterial?.pricePerMl],
+  )
 
   const summary = useMemo(() => {
     const dims = `${widthCm}×${heightCm}×${depthCm} cm`
@@ -415,8 +401,8 @@ export default function ConfiguratorPage() {
       productType,
       productName: productName || undefined,
       dimensionsLabel: dims,
-      materialLabel: materialExtra ? `${material} (+${materialExtra} RON)` : material,
-      colorLabel: colorExtra ? `${color} (+${colorExtra} RON)` : color,
+      materialLabel: selectedMaterial ? `${selectedMaterial.key} — ${selectedMaterial.pricePerMl} RON/ml` : material,
+      colorLabel: color,
       extrasLabel,
       fullName: fullName || undefined,
       phone: phone || undefined,
@@ -429,9 +415,8 @@ export default function ConfiguratorPage() {
     heightCm,
     depthCm,
     material,
-    materialExtra,
+    selectedMaterial,
     color,
-    colorExtra,
     extras,
     fullName,
     phone,
@@ -728,6 +713,7 @@ export default function ConfiguratorPage() {
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       {materialOptions.map((m) => {
                         const active = m.key === material
+                        const price = calcEstimatedPriceRon(widthCm, m.pricePerMl)
                         return (
                           <button
                             key={m.key}
@@ -738,18 +724,19 @@ export default function ConfiguratorPage() {
                               active ? 'border-brand-primary bg-brand-light' : 'border-border bg-white hover:bg-warm',
                             ].join(' ')}
                           >
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className="h-10 w-10 rounded-2xl ring-1 ring-border"
-                                  style={{ background: m.swatch }}
-                                />
-                                <div className="text-sm font-semibold text-text-dark">
-                                  {m.key}
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-text-dark">{m.key}</div>
+                                <div className="mt-1 text-xs font-medium text-text-muted">{m.description}</div>
+                                <div className="mt-2 text-xs text-text-muted">
+                                  {m.pricePerMl} RON / ml · {linearMeters.toFixed(2)} ml
                                 </div>
                               </div>
-                              <div className="text-sm font-semibold text-brand-mid">
-                                {m.extra ? `+${m.extra} RON` : 'Standard'}
+                              <div className="shrink-0 text-right">
+                                <div className="text-[11px] font-semibold text-text-muted">Preț</div>
+                                <div className="mt-1 text-sm font-semibold text-brand-mid">
+                                  {price.toLocaleString('ro-RO')} RON
+                                </div>
                               </div>
                             </div>
                           </button>
