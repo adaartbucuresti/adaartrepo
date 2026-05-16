@@ -1,5 +1,27 @@
-import { Camera, Mail, MapPin, Phone, Pin, Users } from 'lucide-react'
+import { Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
+
+function TikTokIcon({ className = '' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false">
+      <path
+        d="M16 3c.6 2.7 2.5 4.7 5 5v3c-1.9 0-3.6-.6-5-1.7V15c0 3.3-2.7 6-6 6s-6-2.7-6-6 2.7-6 6-6c.4 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3V3h3z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+function FacebookIcon({ className = '' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false">
+      <path
+        d="M14 8h2V5h-2c-2.2 0-4 1.8-4 4v2H8v3h2v7h3v-7h2.2l.8-3H13V9c0-.6.4-1 1-1z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
 
 export default function Footer() {
   return (
@@ -58,31 +80,22 @@ export default function Footer() {
           <div className="text-sm font-semibold text-text-dark">Social</div>
           <div className="mt-4 flex items-center gap-3">
             <a
-              href="https://instagram.com"
+              href="https://www.tiktok.com/@adaartbucuresti"
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-muted transition hover:bg-brand-light hover:text-brand-dark"
-              aria-label="Instagram"
+              aria-label="TikTok"
             >
-              <Camera className="h-5 w-5" />
+              <TikTokIcon className="h-5 w-5" />
             </a>
             <a
-              href="https://facebook.com"
+              href="https://www.facebook.com/MobDesign"
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-muted transition hover:bg-brand-light hover:text-brand-dark"
               aria-label="Facebook"
             >
-              <Users className="h-5 w-5" />
-            </a>
-            <a
-              href="https://pinterest.com"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-muted transition hover:bg-brand-light hover:text-brand-dark"
-              aria-label="Pinterest"
-            >
-              <Pin className="h-5 w-5" />
+              <FacebookIcon className="h-5 w-5" />
             </a>
           </div>
           <div className="mt-6 text-sm font-semibold text-text-dark">Legal</div>

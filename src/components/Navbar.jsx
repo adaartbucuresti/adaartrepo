@@ -110,6 +110,7 @@ export default function Navbar() {
                     'after:absolute after:-bottom-2 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:bg-brand-mid after:transition-transform after:duration-200',
                     'hover:after:scale-x-100',
                     active ? 'after:scale-x-100' : '',
+                    isConfigurator ? 'group' : '',
                     isConfigurator && active
                       ? 'text-brand-dark'
                       : isConfigurator
@@ -118,7 +119,32 @@ export default function Navbar() {
                   ].join(' ')
                 }}
               >
-                {l.label}
+                {l.to === '/configurator' ? (
+                  <span className="relative inline-flex items-center">
+                    <span className="relative z-10">{l.label}</span>
+                    <motion.span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 z-20"
+                      style={{
+                        backgroundImage:
+                          'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(198,139,89,0.95) 45%, rgba(0,0,0,0) 72%)',
+                        backgroundSize: '220% 100%',
+                        backgroundPosition: '-120% 50%',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        color: 'transparent',
+                        filter: 'drop-shadow(0 0 10px rgba(198,139,89,0.35))',
+                      }}
+                      animate={{ backgroundPosition: ['-120% 50%', '220% 50%'] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+                    >
+                      {l.label}
+                    </motion.span>
+                  </span>
+                ) : (
+                  l.label
+                )}
               </NavLink>
             ))}
           </nav>
