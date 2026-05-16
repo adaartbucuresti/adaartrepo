@@ -20,7 +20,19 @@ export default function ConfiguratorSummary({ summary, estimatedPrice }) {
           {entries.map((e) => (
             <div key={e.label} className="flex items-start justify-between gap-4">
               <div className="text-xs text-text-muted">{e.label}</div>
-              <div className="text-right text-xs font-medium text-text-dark">
+              <div
+                className="text-right text-xs font-medium text-text-dark"
+                style={
+                  e.label === 'Opțiuni extra'
+                    ? {
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }
+                    : undefined
+                }
+              >
                 {e.value}
               </div>
             </div>

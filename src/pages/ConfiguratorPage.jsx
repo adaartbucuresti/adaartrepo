@@ -19,6 +19,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import ConfiguratorSummary from '../components/ConfiguratorSummary.jsx'
 import { products } from '../data/products.js'
 import { getColorOption, getColorsForMaterial, isColorValidForMaterial } from '../lib/colors.js'
+import { EXTRAS_OPTIONS, getExtraById, getExtrasTotal } from '../lib/extras.js'
 import { DEFAULT_MATERIAL_KEY, MATERIAL_PRICING, calcEstimatedPriceRon, calcLinearMeters, getMaterialPricing } from '../lib/pricing.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
@@ -73,13 +74,6 @@ const dimensionRanges = {
 }
 
 const materialOptions = MATERIAL_PRICING
-
-const extrasOptions = [
-  { key: 'Iluminat interior LED', extra: 350 },
-  { key: 'Oglindă pe ușă', extra: 280 },
-  { key: 'Sistem push-open fără mânere', extra: 420 },
-  { key: 'Montaj și transport inclus', extra: 600 },
-]
 
 const steps = [
   { id: 1, title: 'Tip produs' },
@@ -186,7 +180,9 @@ export default function ConfiguratorPage() {
 
   const [material, setMaterial] = useState(DEFAULT_MATERIAL_KEY)
   const [colorId, setColorId] = useState('')
-  const [extras, setExtras] = useState([])
+  const [extrasSelected, setExtrasSelected] = useState([])
+  const [extrasCustomEnabled, setExtrasCustomEnabled] = useState(false)
+  const [extrasCustomText, setExtrasCustomText] = useState('')
 
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -245,7 +241,9 @@ export default function ConfiguratorPage() {
     setDepthCm(mid(nextInitialRange.d[0], nextInitialRange.d[1]))
     setMaterial(DEFAULT_MATERIAL_KEY)
     setColorId('')
-    setExtras([])
+    setExtrasSelected([])
+    setExtrasCustomEnabled(false)
+    setExtrasCustomText('')
     setNotes('')
     setConsent(false)
 
@@ -308,10 +306,29 @@ export default function ConfiguratorPage() {
           : ''
     setColorId(isColorValidForMaterial(draftMaterial, maybeColorId) ? maybeColorId : '')
 
-    if (Array.isArray(draft.extras)) {
-      const allowed = new Set(extrasOptions.map((x) => x.key))
-      setExtras(draft.extras.filter((x) => typeof x === 'string' && allowed.has(x)))
+    const allowedExtraIds = new Set(EXTRAS_OPTIONS.map((x) => x.id))
+    const rawExtras = Array.isArray(draft.extrasSelected)
+      ? draft.extrasSelected
+      : Array.isArray(draft.extras)
+        ? draft.extras
+        : []
+
+    if (Array.isArray(rawExtras)) {
+      const resolved = rawExtras
+        .filter((x) => typeof x === 'string')
+        .map((x) => {
+          if (allowedExtraIds.has(x)) return x
+          return EXTRAS_OPTIONS.find((o) => o.label === x)?.id || null
+        })
+        .filter(Boolean)
+      setExtrasSelected(Array.from(new Set(resolved)))
+    } else {
+      setExtrasSelected([])
     }
+
+    const draftCustomText = typeof draft.extrasCustomText === 'string' ? draft.extrasCustomText : ''
+    setExtrasCustomText(draftCustomText)
+    setExtrasCustomEnabled(Boolean(draft.extrasCustomEnabled) || Boolean(draftCustomText.trim()))
 
     setNotes(typeof draft.notes === 'string' ? draft.notes : '')
     setConsent(Boolean(draft.consent))
@@ -329,6 +346,9 @@ export default function ConfiguratorPage() {
     setProductName(preselectedProduct.name)
     setProductType(mapped)
     setColorId('')
+    setExtrasSelected([])
+    setExtrasCustomEnabled(false)
+    setExtrasCustomText('')
     const nextRange = dimensionRanges[mapped]
     setWidthCm((v) => clampNumber(v, nextRange.w[0], nextRange.w[1]))
     setHeightCm((v) => clampNumber(v, nextRange.h[0], nextRange.h[1]))
@@ -352,7 +372,9 @@ export default function ConfiguratorPage() {
           material,
           colorId,
           colorLabel: selectedColor?.label || undefined,
-          extras,
+          extrasSelected,
+          extrasCustomEnabled,
+          extrasCustomText,
           fullName,
           phone,
           email,
@@ -380,7 +402,9 @@ export default function ConfiguratorPage() {
     depthCm,
     material,
     colorId,
-    extras,
+    extrasSelected,
+    extrasCustomEnabled,
+    extrasCustomText,
     fullName,
     phone,
     email,
@@ -393,9 +417,10 @@ export default function ConfiguratorPage() {
   const selectedColor = useMemo(() => getColorOption(material, colorId), [material, colorId])
   const colorsForMaterial = useMemo(() => getColorsForMaterial(material), [material])
   const linearMeters = useMemo(() => calcLinearMeters(widthCm), [widthCm])
+  const extrasTotal = useMemo(() => getExtrasTotal(extrasSelected), [extrasSelected])
   const estimatedPrice = useMemo(
-    () => calcEstimatedPriceRon(widthCm, selectedMaterial?.pricePerMl),
-    [widthCm, selectedMaterial?.pricePerMl],
+    () => calcEstimatedPriceRon(widthCm, selectedMaterial?.pricePerMl) + extrasTotal,
+    [widthCm, selectedMaterial?.pricePerMl, extrasTotal],
   )
 
   useEffect(() => {
@@ -406,7 +431,12 @@ export default function ConfiguratorPage() {
 
   const summary = useMemo(() => {
     const dims = `${widthCm}×${heightCm}×${depthCm} cm`
-    const extrasLabel = extras.length ? extras.join(', ') : '—'
+    const labels = extrasSelected
+      .map((id) => getExtraById(id)?.label)
+      .filter(Boolean)
+    const extraText = labels.length ? labels.join(', ') : '—'
+    const custom = extrasCustomText.trim()
+    const extrasLabel = custom ? `${extraText} · Alte opțiuni: ${custom}` : extraText
     return {
       productType,
       productName: productName || undefined,
@@ -429,7 +459,8 @@ export default function ConfiguratorPage() {
     selectedMaterial,
     colorId,
     selectedColor,
-    extras,
+    extrasSelected,
+    extrasCustomText,
     fullName,
     phone,
     email,
@@ -449,10 +480,10 @@ export default function ConfiguratorPage() {
     setDepthCm((v) => clampNumber(v, nextRange.d[0], nextRange.d[1]))
   }
 
-  const toggleExtra = (k) => {
-    setExtras((prev) => {
-      if (prev.includes(k)) return prev.filter((x) => x !== k)
-      return [...prev, k]
+  const toggleExtra = (id) => {
+    setExtrasSelected((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      return [...prev, id]
     })
   }
 
@@ -519,6 +550,7 @@ export default function ConfiguratorPage() {
       notesParts.push(`Alt produs: ${productName.trim()}\n${otherDescription.trim()}`)
     }
     if (notes.trim()) notesParts.push(notes.trim())
+    if (extrasCustomText.trim()) notesParts.push(`Alte opțiuni: ${extrasCustomText.trim()}`)
     const combinedNotes = notesParts.length ? notesParts.join('\n\n') : null
 
     setSubmitLoading(true)
@@ -533,7 +565,7 @@ export default function ConfiguratorPage() {
       depth_cm: depthCm,
       material,
       color: selectedColor.label,
-      extras,
+      extras: extrasSelected.map((id) => getExtraById(id)?.label).filter(Boolean),
       estimated_price: estimatedPrice,
       status: 'nou',
     })
@@ -816,13 +848,13 @@ export default function ConfiguratorPage() {
                   <div>
                     <div className="text-sm font-semibold text-text-dark">Opțiuni extra</div>
                     <div className="mt-4 space-y-3">
-                      {extrasOptions.map((o) => {
-                        const active = extras.includes(o.key)
+                      {EXTRAS_OPTIONS.map((o) => {
+                        const active = extrasSelected.includes(o.id)
                         return (
                           <button
-                            key={o.key}
+                            key={o.id}
                             type="button"
-                            onClick={() => toggleExtra(o.key)}
+                            onClick={() => toggleExtra(o.id)}
                             className={[
                               'flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left transition',
                               active
@@ -841,13 +873,33 @@ export default function ConfiguratorPage() {
                               >
                                 <Check className="h-4 w-4" />
                               </span>
-                              <div className="text-sm font-medium text-text-dark">{o.key}</div>
+                              <div className="text-sm font-medium text-text-dark">{o.label}</div>
                             </div>
-                            <div className="text-sm font-semibold text-brand-mid">+{o.extra} RON</div>
+                            <div className="text-sm font-semibold text-brand-mid">+{o.price} RON</div>
                           </button>
                         )
                       })}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setExtrasCustomEnabled((v) => !v)}
+                      className="mt-5 inline-flex items-center justify-center rounded-full border border-brand-primary px-5 py-2 text-sm font-medium text-brand-primary transition hover:bg-brand-light"
+                    >
+                      {extrasCustomEnabled ? 'Ascunde' : 'Alte opțiuni (la cerere)'}
+                    </button>
+
+                    {extrasCustomEnabled ? (
+                      <div className="mt-4">
+                        <textarea
+                          value={extrasCustomText}
+                          onChange={(e) => setExtrasCustomText(e.target.value)}
+                          rows={4}
+                          placeholder="Scrie aici ce îți dorești (ex: dimensiuni compartimentare, tip mânere, sticlă, frezare, etc.)"
+                          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
