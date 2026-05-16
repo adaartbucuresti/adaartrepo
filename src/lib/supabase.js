@@ -38,7 +38,13 @@ const createNoopClient = () => ({
     signInWithPassword: async () => ({ data: null, error: notConfiguredError }),
     signOut: async () => ({ error: null }),
     resetPasswordForEmail: async () => ({ data: null, error: notConfiguredError }),
+    resend: async () => ({ data: null, error: notConfiguredError }),
+    verifyOtp: async () => ({ data: null, error: notConfiguredError }),
+    exchangeCodeForSession: async () => ({ data: null, error: notConfiguredError }),
+    setSession: async () => ({ data: null, error: notConfiguredError }),
+    updateUser: async () => ({ data: null, error: notConfiguredError }),
   },
+  functions: { invoke: async () => ({ data: null, error: notConfiguredError }) },
 })
 
 export const supabase = isSupabaseConfigured

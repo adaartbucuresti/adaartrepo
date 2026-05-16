@@ -68,6 +68,20 @@ export default function App() {
         />
 
         <Route
+          path="/finalizare-cont"
+          element={
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              <AuthPage />
+            </motion.div>
+          }
+        />
+
+        <Route
           path="/admin"
           element={
             <AdminRoute>

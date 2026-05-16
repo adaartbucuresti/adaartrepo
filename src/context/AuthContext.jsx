@@ -42,11 +42,14 @@ export function AuthProvider({ children }) {
 
   const isAdmin = profile?.role === 'admin'
 
-  const signUp = async (email, password, fullName) => {
+  const signUp = async (email, password, fullName, emailRedirectTo) => {
     return await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        ...(emailRedirectTo ? { emailRedirectTo } : {}),
+        data: { full_name: fullName },
+      },
     })
   }
 
