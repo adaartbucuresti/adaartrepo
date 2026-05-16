@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Mail, MapPin, Paperclip, Phone, User, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { ArrowRight, Mail, MapPin, Phone, User, X } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 const fadeUp = {
@@ -10,30 +10,15 @@ const fadeUp = {
 
 const confirmationText = 'Cererea ta a fost înregistrată! Te contactăm în 24 de ore.'
 
-const formatBytes = (value) => {
-  const bytes = Number(value || 0)
-  if (bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
-  const n = bytes / 1024 ** i
-  const digits = i === 0 ? 0 : n < 10 ? 1 : 0
-  return `${n.toFixed(digits)} ${units[i]}`
-}
-
 export default function ContactPage() {
   const MotionDiv = motion.div
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
-  const [files, setFiles] = useState([])
   const [agreed, setAgreed] = useState(false)
   const [formError, setFormError] = useState('')
   const [successOpen, setSuccessOpen] = useState(false)
-  const fileRef = useRef(null)
-
-  const maxFiles = 10
-  const maxTotalBytes = 30 * 1024 * 1024
 
   const submit = (e) => {
     e.preventDefault()
@@ -44,39 +29,7 @@ export default function ContactPage() {
     }
     setSuccessOpen(true)
   }
-
-  const openFilePicker = () => {
-    fileRef.current?.click?.()
-  }
-
-  const onPickFiles = (e) => {
-    const incoming = Array.from(e.target.files || [])
-    if (!incoming.length) return
-
-    const next = [...files]
-    for (const f of incoming) {
-      if (next.length >= maxFiles) break
-      const exists = next.some((x) => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)
-      if (!exists) next.push(f)
-    }
-
-    const total = next.reduce((acc, f) => acc + (f?.size || 0), 0)
-    if (total > maxTotalBytes) {
-      setFormError('Dimensiunea totală a fișierelor depășește 30MB.')
-    } else {
-      setFormError('')
-    }
-
-    setFiles(next)
-    e.target.value = ''
-  }
-
-  const removeFile = (idx) => {
-    setFiles((prev) => prev.filter((_, i) => i !== idx))
-  }
-
-  const totalSize = files.reduce((acc, f) => acc + (f?.size || 0), 0)
-  const canSubmit = agreed && totalSize <= maxTotalBytes
+  const canSubmit = agreed
 
   return (
     <div className="bg-cream">
@@ -152,60 +105,6 @@ export default function ContactPage() {
                   rows={5}
                   className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
                 />
-              </div>
-
-              <div className="rounded-2xl border border-border bg-cream p-5">
-                <div className="text-sm font-semibold text-text-dark">Fișiere atașate</div>
-                <div className="mt-1 text-xs text-text-muted">
-                  Încarcă schițe, imagini sau materiale video utile pentru estimarea proiectului. Poți adăuga până la 10 fișiere (maxim 30MB).
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={openFilePicker}
-                    className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold text-text-dark transition duration-200 hover:bg-brand-light"
-                  >
-                    <Paperclip className="h-4 w-4 text-text-muted" />
-                    Alege fișiere
-                  </button>
-                  <div className="text-xs text-text-muted">
-                    {files.length}/{maxFiles} • {formatBytes(totalSize)} / {formatBytes(maxTotalBytes)}
-                  </div>
-                </div>
-
-                <input
-                  ref={fileRef}
-                  type="file"
-                  multiple
-                  accept="image/*,video/*,application/pdf,application/zip,application/x-zip-compressed,application/x-rar-compressed"
-                  onChange={onPickFiles}
-                  className="hidden"
-                />
-
-                {files.length ? (
-                  <div className="mt-4 grid gap-2">
-                    {files.map((f, idx) => (
-                      <div
-                        key={`${f.name}-${f.size}-${f.lastModified}`}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3"
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-text-dark">{f.name}</div>
-                          <div className="mt-0.5 text-xs text-text-muted">{formatBytes(f.size)}</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(idx)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-muted transition duration-200 hover:bg-brand-light hover:text-text-dark"
-                          aria-label="Elimină fișier"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
               </div>
 
               <div className="rounded-2xl border border-border bg-white p-4">
@@ -292,7 +191,7 @@ export default function ContactPage() {
               <iframe
                 title="Harta"
                 className="h-64 w-full"
-                src="https://www.google.com/maps?q=Str.%20Vasile%20Stolnicul%2C%20Nr.3%2C%20Zona%20Baicului%2C%20Sector%202%2C%20Bucuresti&output=embed"
+                src="https://www.google.com/maps?q=ada%20art%20bucuresti&output=embed"
                 loading="lazy"
               />
             </div>

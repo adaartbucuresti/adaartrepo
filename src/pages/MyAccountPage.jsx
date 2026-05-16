@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bell,
   ClipboardList,
   Home,
   LayoutDashboard,
@@ -92,7 +91,6 @@ export default function MyAccountPage() {
       { key: 'personal', label: 'Informații personale', shortLabel: 'Profil', icon: User },
       { key: 'security', label: 'Securitate', shortLabel: 'Securit.', icon: Shield },
       { key: 'requests', label: 'Cererile mele', shortLabel: 'Cereri', icon: ClipboardList },
-      { key: 'notifications', label: 'Notificări', shortLabel: 'Notific.', icon: Bell },
       { key: 'logout', label: 'Ieși din cont', shortLabel: 'Ieși', icon: LogOut },
     ],
     [],
@@ -273,20 +271,32 @@ export default function MyAccountPage() {
     firstName: '',
     lastName: '',
     phone: '',
-    birthDate: '',
-    address: '',
   })
 
   useEffect(() => {
+    const metaFirst = normalizeString(user?.user_metadata?.first_name || '')
+    const metaLast = normalizeString(user?.user_metadata?.last_name || '')
     setPersonalDraft({
-      firstName: normalizeString(localProfile?.first_name || fullNameParts.first),
-      lastName: normalizeString(localProfile?.last_name || fullNameParts.last),
-      phone: normalizeString(localProfile?.phone || localProfile?.phone_number || ''),
-      birthDate: normalizeString(localProfile?.birth_date || localProfile?.birthday || ''),
-      address: normalizeString(localProfile?.address || localProfile?.shipping_address || ''),
+      firstName: metaFirst || normalizeString(fullNameParts.first),
+      lastName: metaLast || normalizeString(fullNameParts.last),
+      phone: normalizeString(
+        localProfile?.phone ||
+          localProfile?.phone_number ||
+          user?.user_metadata?.phone ||
+          user?.user_metadata?.phone_number ||
+          '',
+      ),
     })
     setEditingFields(new Set())
-  }, [fullNameParts.first, fullNameParts.last, localProfile])
+  }, [
+    fullNameParts.first,
+    fullNameParts.last,
+    localProfile,
+    user?.user_metadata?.first_name,
+    user?.user_metadata?.last_name,
+    user?.user_metadata?.phone,
+    user?.user_metadata?.phone_number,
+  ])
 
   const toggleField = (field) => {
     setEditingFields((prev) => {
@@ -318,8 +328,6 @@ export default function MyAccountPage() {
     firstName: null,
     lastName: null,
     phone: null,
-    birthDate: null,
-    address: null,
   })
 
   const savePersonal = async () => {
@@ -329,17 +337,23 @@ export default function MyAccountPage() {
       if (!isSupabaseConfigured) throw new Error('Supabase nu este configurat.')
       const firstName = normalizeString(personalDraft.firstName)
       const lastName = normalizeString(personalDraft.lastName)
-      const payload = {
-        full_name: [firstName, lastName].filter(Boolean).join(' ').trim() || null,
-        first_name: firstName || null,
-        last_name: lastName || null,
-        phone: normalizeString(personalDraft.phone) || null,
-        birth_date: normalizeString(personalDraft.birthDate) || null,
-        address: normalizeString(personalDraft.address) || null,
-      }
-      const { data, error } = await supabase.from('profiles').update(payload).eq('id', user.id).select('*').single()
+      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+      const nextPhone = normalizeString(personalDraft.phone)
+
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...(firstName ? { first_name: firstName } : {}),
+          ...(lastName ? { last_name: lastName } : {}),
+          ...(fullName ? { full_name: fullName } : {}),
+          ...(nextPhone ? { phone: nextPhone } : {}),
+        },
+      })
       if (error) throw error
-      setLocalProfile(data || localProfile)
+
+      setLocalProfile((prev) => ({
+        ...(prev || {}),
+        full_name: fullName || prev?.full_name || null,
+      }))
       setEditingFields(new Set())
       pushToast({ type: 'success', title: 'Modificări salvate.', message: 'Profilul tău a fost actualizat.' })
     } catch (err) {
@@ -385,60 +399,6 @@ export default function MyAccountPage() {
       pushToast({ type: 'error', title: 'Nu am putut schimba parola.', message: err?.message || 'Încearcă din nou.' })
     } finally {
       setSecuritySaving(false)
-    }
-  }
-
-  const [notificationDraft, setNotificationDraft] = useState({
-    email: { enabled: true, cereri: true, promotii: false, sistem: true },
-    sms: { enabled: false, cereri: true, promotii: false, sistem: true },
-    browser: { enabled: true, cereri: true, promotii: true, sistem: true },
-  })
-  const [notificationSaving, setNotificationSaving] = useState(false)
-
-  useEffect(() => {
-    const prefs = localProfile?.notification_prefs || localProfile?.notifications || null
-    if (!prefs || typeof prefs !== 'object') return
-    const safe = (channelKey) => {
-      const v = prefs?.[channelKey]
-      if (!v || typeof v !== 'object') return null
-      return {
-        enabled: Boolean(v.enabled),
-        cereri: Boolean(v.cereri),
-        promotii: Boolean(v.promotii),
-        sistem: Boolean(v.sistem),
-      }
-    }
-    setNotificationDraft((prev) => ({
-      email: safe('email') || prev.email,
-      sms: safe('sms') || prev.sms,
-      browser: safe('browser') || prev.browser,
-    }))
-  }, [localProfile?.notification_prefs, localProfile?.notifications])
-
-  const setNotif = (channel, key, value) => {
-    setNotificationDraft((prev) => ({
-      ...prev,
-      [channel]: {
-        ...prev[channel],
-        [key]: value,
-      },
-    }))
-  }
-
-  const saveNotifications = async () => {
-    if (!user) return
-    setNotificationSaving(true)
-    try {
-      if (!isSupabaseConfigured) throw new Error('Supabase nu este configurat.')
-      const payload = { notification_prefs: notificationDraft }
-      const { data, error } = await supabase.from('profiles').update(payload).eq('id', user.id).select('*').single()
-      if (error) throw error
-      setLocalProfile(data || localProfile)
-      pushToast({ type: 'success', title: 'Preferințe salvate.', message: 'Notificările au fost actualizate.' })
-    } catch (err) {
-      pushToast({ type: 'error', title: 'Nu am putut salva.', message: err?.message || 'Încearcă din nou.' })
-    } finally {
-      setNotificationSaving(false)
     }
   }
 
@@ -619,12 +579,14 @@ export default function MyAccountPage() {
                       </div>
                       <div className="mt-5 grid gap-3 sm:grid-cols-2">
                         <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                          <div className="text-xs font-semibold text-text-muted">Telefon</div>
-                          <div className="mt-1 text-sm font-semibold text-text-dark">{personalDraft.phone || '—'}</div>
+                          <div className="text-xs font-semibold text-text-muted">Nume complet</div>
+                          <div className="mt-1 text-sm font-semibold text-text-dark">
+                            {[personalDraft.firstName, personalDraft.lastName].filter(Boolean).join(' ').trim() || '—'}
+                          </div>
                         </div>
                         <div className="rounded-2xl border border-border bg-[#f5f3ef] p-4">
-                          <div className="text-xs font-semibold text-text-muted">Adresă</div>
-                          <div className="mt-1 break-words text-sm font-semibold leading-snug text-text-dark">{personalDraft.address || '—'}</div>
+                          <div className="text-xs font-semibold text-text-muted">Telefon</div>
+                          <div className="mt-1 text-sm font-semibold text-text-dark">{personalDraft.phone || '—'}</div>
                         </div>
                       </div>
                     </motion.div>
@@ -671,17 +633,13 @@ export default function MyAccountPage() {
                       <div>
                         <div className="text-sm font-semibold text-text-dark">Acces rapid</div>
                         <div className="mt-1 text-xs text-text-muted">
-                          Actualizează parola, setează notificările și gestionează profilul într-un singur loc.
+                          Actualizează parola și gestionează profilul într-un singur loc.
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <button type="button" onClick={() => onNavigate('security')} className={secondaryButtonClass}>
                           <Shield className="h-4 w-4 text-text-muted" />
                           Securitate
-                        </button>
-                        <button type="button" onClick={() => onNavigate('notifications')} className={secondaryButtonClass}>
-                          <Bell className="h-4 w-4 text-text-muted" />
-                          Notificări
                         </button>
                       </div>
                     </div>
@@ -782,48 +740,6 @@ export default function MyAccountPage() {
                           disabled={!editingFields.has('phone')}
                           placeholder="07xx xxx xxx"
                           inputMode="tel"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-5 md:grid-cols-2">
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <label className="text-xs font-semibold text-text-muted">Dată naștere</label>
-                          <button type="button" onClick={() => toggleField('birthDate')} className={editButtonClass}>
-                            <Pencil className="h-4 w-4 text-text-muted" />
-                            {editingFields.has('birthDate') ? 'Gata' : 'Editează'}
-                          </button>
-                        </div>
-                        <input
-                          type="date"
-                          ref={(el) => {
-                            inputRefs.current.birthDate = el
-                          }}
-                          className={['mt-2', inputClass].join(' ')}
-                          value={personalDraft.birthDate}
-                          onChange={(e) => updatePersonalField('birthDate', e.target.value)}
-                          disabled={!editingFields.has('birthDate')}
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <label className="text-xs font-semibold text-text-muted">Adresă</label>
-                          <button type="button" onClick={() => toggleField('address')} className={editButtonClass}>
-                            <Pencil className="h-4 w-4 text-text-muted" />
-                            {editingFields.has('address') ? 'Gata' : 'Editează'}
-                          </button>
-                        </div>
-                        <input
-                          ref={(el) => {
-                            inputRefs.current.address = el
-                          }}
-                          className={['mt-2', inputClass].join(' ')}
-                          value={personalDraft.address}
-                          onChange={(e) => updatePersonalField('address', e.target.value)}
-                          disabled={!editingFields.has('address')}
-                          placeholder="Stradă, număr, oraș"
                         />
                       </div>
                     </div>
@@ -1049,98 +965,6 @@ export default function MyAccountPage() {
                 </motion.div>
               ) : null}
 
-              {activeKey === 'notifications' ? (
-                <motion.div
-                  key="notifications"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="rounded-2xl border border-border bg-white p-6 shadow-soft"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-text-dark">Notificări</div>
-                      <div className="mt-1 text-xs text-text-muted">
-                        Alege ce tipuri de mesaje vrei să primești, pe fiecare canal.
-                      </div>
-                    </div>
-                    <button type="button" onClick={saveNotifications} disabled={notificationSaving} className={primaryButtonClass}>
-                      {notificationSaving ? 'Se salvează…' : 'Salvează preferințele'}
-                    </button>
-                  </div>
-
-                  <div className="mt-6 grid gap-6">
-                    {[
-                      { key: 'email', label: 'Email' },
-                      { key: 'sms', label: 'SMS' },
-                      { key: 'browser', label: 'Notificări browser' },
-                    ].map((c) => {
-                      const channel = notificationDraft[c.key]
-                      return (
-                        <div key={c.key} className="rounded-2xl border border-border bg-[#f5f3ef] p-5">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <div className="text-sm font-semibold text-text-dark">{c.label}</div>
-                              <div className="mt-1 text-xs text-text-muted">Controlează mesajele pe acest canal.</div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setNotif(c.key, 'enabled', !channel.enabled)}
-                              className={[
-                                'relative inline-flex h-8 w-14 items-center rounded-full border transition duration-200',
-                                channel.enabled ? 'border-[#2d4a3e]/30 bg-[#2d4a3e]/10' : 'border-border bg-white',
-                              ].join(' ')}
-                              aria-pressed={channel.enabled}
-                            >
-                              <span
-                                className={[
-                                  'inline-block h-6 w-6 transform rounded-full bg-white shadow-soft transition duration-200',
-                                  channel.enabled ? 'translate-x-7 ring-2 ring-[#2d4a3e]/20' : 'translate-x-1 ring-1 ring-border',
-                                ].join(' ')}
-                              />
-                            </button>
-                          </div>
-
-                          <div className="mt-4 grid gap-3 md:grid-cols-3">
-                            {[
-                              { key: 'cereri', label: 'Cererile mele' },
-                              { key: 'promotii', label: 'Promoții' },
-                              { key: 'sistem', label: 'Sistem' },
-                            ].map((s) => (
-                              <button
-                                key={s.key}
-                                type="button"
-                                onClick={() => setNotif(c.key, s.key, !channel[s.key])}
-                                disabled={!channel.enabled}
-                                className={[
-                                  'flex items-center justify-between gap-3 rounded-2xl border bg-white px-4 py-3 text-left text-sm font-semibold transition duration-200',
-                                  channel.enabled ? 'border-border hover:bg-[#f5f3ef]' : 'cursor-not-allowed border-border/60 opacity-60',
-                                ].join(' ')}
-                              >
-                                <span className="text-text-dark">{s.label}</span>
-                                <span
-                                  className={[
-                                    'inline-flex h-6 w-10 items-center rounded-full border transition duration-200',
-                                    channel[s.key] ? 'border-[#2d4a3e]/30 bg-[#2d4a3e]/10' : 'border-border bg-[#f5f3ef]',
-                                  ].join(' ')}
-                                >
-                                  <span
-                                    className={[
-                                      'inline-block h-5 w-5 transform rounded-full bg-white shadow-soft transition duration-200',
-                                      channel[s.key] ? 'translate-x-4 ring-2 ring-[#2d4a3e]/20' : 'translate-x-0.5 ring-1 ring-border',
-                                    ].join(' ')}
-                                  />
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </motion.div>
-              ) : null}
             </AnimatePresence>
           </main>
         </div>

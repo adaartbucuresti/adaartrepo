@@ -8,6 +8,7 @@ import {
   Home,
   Check,
   Layers,
+  Paperclip,
   Plus,
   Square,
   Tv,
@@ -85,6 +86,16 @@ const steps = [
 ]
 
 const confirmationText = 'Cererea ta a fost înregistrată! Te contactăm în 24 de ore.'
+
+const formatBytes = (value) => {
+  const bytes = Number(value || 0)
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
+  const n = bytes / 1024 ** i
+  const digits = i === 0 ? 0 : n < 10 ? 1 : 0
+  return `${n.toFixed(digits)} ${units[i]}`
+}
 
 function clampNumber(value, min, max) {
   const n = Number.isFinite(value) ? value : 0
@@ -189,6 +200,10 @@ export default function ConfiguratorPage() {
   const [email, setEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [consent, setConsent] = useState(false)
+  const [files, setFiles] = useState([])
+  const fileRef = useRef(null)
+  const maxFiles = 10
+  const maxTotalBytes = 30 * 1024 * 1024
 
   const [successOpen, setSuccessOpen] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
@@ -196,6 +211,34 @@ export default function ConfiguratorPage() {
   const [stepError, setStepError] = useState('')
 
   const emailAllowed = useMemo(() => isAllowedEmail(email), [email])
+  const totalFilesSize = useMemo(() => files.reduce((acc, f) => acc + (f?.size || 0), 0), [files])
+  const filesSizeOk = totalFilesSize <= maxTotalBytes
+
+  const openFilePicker = () => {
+    fileRef.current?.click?.()
+  }
+
+  const onPickFiles = (e) => {
+    const incoming = Array.from(e.target.files || [])
+    if (!incoming.length) return
+
+    const next = [...files]
+    for (const f of incoming) {
+      if (next.length >= maxFiles) break
+      const exists = next.some((x) => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)
+      if (!exists) next.push(f)
+    }
+
+    const total = next.reduce((acc, f) => acc + (f?.size || 0), 0)
+    if (total > maxTotalBytes) setSubmitError('Dimensiunea totală a fișierelor depășește 30MB.')
+
+    setFiles(next)
+    e.target.value = ''
+  }
+
+  const removeFile = (idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   const readDraft = () => {
     try {
@@ -538,6 +581,10 @@ export default function ConfiguratorPage() {
     }
     if (!emailAllowed) {
       setSubmitError('Email-ul trebuie să fie de tip @gmail.com, @outlook.com etc.')
+      return
+    }
+    if (totalFilesSize > maxTotalBytes) {
+      setSubmitError('Dimensiunea totală a fișierelor depășește 30MB.')
       return
     }
     if (!colorId || !selectedColor) {
@@ -961,6 +1008,60 @@ export default function ConfiguratorPage() {
                       </div>
                     </div>
 
+                    <div className="mt-5 rounded-2xl border border-border bg-cream p-5">
+                      <div className="text-sm font-semibold text-text-dark">Fișiere atașate (opțional)</div>
+                      <div className="mt-1 text-xs text-text-muted">
+                        Încarcă schițe, imagini sau materiale video utile pentru estimarea proiectului. Poți adăuga până la 10 fișiere (maxim 30MB).
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <button
+                          type="button"
+                          onClick={openFilePicker}
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold text-text-dark transition duration-200 hover:bg-brand-light"
+                        >
+                          <Paperclip className="h-4 w-4 text-text-muted" />
+                          Alege fișiere
+                        </button>
+                        <div className={['text-xs', filesSizeOk ? 'text-text-muted' : 'font-semibold text-red-600'].join(' ')}>
+                          {files.length}/{maxFiles} • {formatBytes(totalFilesSize)} / {formatBytes(maxTotalBytes)}
+                        </div>
+                      </div>
+
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        accept="image/*,video/*,application/pdf,application/zip,application/x-zip-compressed,application/x-rar-compressed"
+                        onChange={onPickFiles}
+                        className="hidden"
+                      />
+
+                      {files.length ? (
+                        <div className="mt-4 grid gap-2">
+                          {files.map((f, idx) => (
+                            <div
+                              key={`${f.name}-${f.size}-${f.lastModified}`}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3"
+                            >
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-text-dark">{f.name}</div>
+                                <div className="mt-0.5 text-xs text-text-muted">{formatBytes(f.size)}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(idx)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-muted transition duration-200 hover:bg-brand-light hover:text-text-dark"
+                                aria-label="Elimină fișier"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
                     <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-cream p-4">
                       <input
                         type="checkbox"
@@ -979,7 +1080,7 @@ export default function ConfiguratorPage() {
                     <button
                       type="submit"
                       className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid disabled:opacity-50"
-                      disabled={!consent || submitLoading || !fullName.trim() || !phone.trim() || !emailAllowed}
+                      disabled={!consent || submitLoading || !fullName.trim() || !phone.trim() || !emailAllowed || !filesSizeOk}
                     >
                       {submitLoading ? 'Se trimite…' : 'Trimite cererea de ofertă'}
                     </button>

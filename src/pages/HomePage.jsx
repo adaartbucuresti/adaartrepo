@@ -9,7 +9,7 @@ import MarqueeBanner from '../components/MarqueeBanner.jsx'
 import ProductCard from '../components/ProductCard.jsx'
 import Testimonials from '../components/Testimonials.jsx'
 import { products } from '../data/products.js'
-import { supabase } from '../lib/supabase.js'
+import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -18,18 +18,29 @@ const fadeUp = {
 
 export default function HomePage() {
   const MotionDiv = motion.div
-  const [items, setItems] = useState(products)
+  const [items, setItems] = useState(() => (isSupabaseConfigured ? [] : products))
+  const [loadingProducts, setLoadingProducts] = useState(isSupabaseConfigured)
+  const [productsError, setProductsError] = useState('')
   const featured = items.slice(0, 3)
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return
     let alive = true
+    setLoadingProducts(true)
+    setProductsError('')
     supabase
       .from('products')
       .select('*')
       .eq('active', true)
       .order('sort_order', { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (!alive) return
+        if (error) {
+          setProductsError(error.message || 'Nu am putut încărca produsele.')
+          setItems([])
+          setLoadingProducts(false)
+          return
+        }
         const mapped = (data || []).map((p) => {
           const images = Array.isArray(p.images) ? p.images : []
           return {
@@ -43,7 +54,8 @@ export default function HomePage() {
             images,
           }
         })
-        if (mapped.length) setItems(mapped)
+        setItems(mapped)
+        setLoadingProducts(false)
       })
     return () => {
       alive = false
@@ -83,9 +95,32 @@ export default function HomePage() {
           </MotionDiv>
 
           <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {featured.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+            {loadingProducts ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft"
+                >
+                  <div className="h-56 w-full animate-pulse bg-cream" />
+                  <div className="space-y-3 p-6">
+                    <div className="h-3 w-20 animate-pulse rounded bg-cream" />
+                    <div className="h-5 w-40 animate-pulse rounded bg-cream" />
+                    <div className="h-3 w-28 animate-pulse rounded bg-cream" />
+                    <div className="mt-4 h-11 w-full animate-pulse rounded-full bg-cream" />
+                  </div>
+                </div>
+              ))
+            ) : productsError ? (
+              <div className="rounded-2xl border border-border bg-white p-6 text-sm text-red-600 shadow-soft md:col-span-2 lg:col-span-3">
+                {productsError}
+              </div>
+            ) : featured.length === 0 ? (
+              <div className="rounded-2xl border border-border bg-white p-6 text-sm text-text-muted shadow-soft md:col-span-2 lg:col-span-3">
+                Momentan nu sunt produse disponibile.
+              </div>
+            ) : (
+              featured.map((p) => <ProductCard key={p.id} product={p} />)
+            )}
           </div>
 
           <div className="mt-10 md:hidden">
