@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
+import { useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import ConsentBanner from './components/ConsentBanner.jsx'
 import { AdminRoute } from './components/ProtectedRoute.jsx'
 import SmoothScroll from './components/SmoothScroll.jsx'
+import { isSupabaseConfigured, supabase } from './lib/supabase.js'
 import HomePage from './pages/HomePage.jsx'
 import ProductsPage from './pages/ProductsPage.jsx'
 import ProductDetailPage from './pages/ProductDetailPage.jsx'
@@ -23,6 +25,22 @@ import AdminCarousel from './pages/admin/AdminCarousel.jsx'
 import AdminTestimonials from './pages/admin/AdminTestimonials.jsx'
 
 function PublicLayout() {
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let intervalId = 0
+    const track = async () => {
+      try {
+        await supabase.functions.invoke('site-metrics', { body: { action: 'track' } })
+      } catch {
+      }
+    }
+    Promise.resolve().then(track)
+    intervalId = window.setInterval(track, 20_000)
+    return () => {
+      if (intervalId) window.clearInterval(intervalId)
+    }
+  }, [])
+
   return (
     <div className="min-h-dvh bg-cream text-text-dark">
       <Navbar />

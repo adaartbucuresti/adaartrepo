@@ -25,6 +25,8 @@ export default function AdminDashboard() {
   const { pathname } = useLocation()
   const [newCount, setNewCount] = useState(0)
   const [lastNewRequest, setLastNewRequest] = useState(null)
+  const [metrics, setMetrics] = useState({ online: 0, visitors: 0, accounts: 0 })
+  const [metricsError, setMetricsError] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -85,6 +87,39 @@ export default function AdminDashboard() {
     const id = window.setTimeout(() => setLastNewRequest(null), 6500)
     return () => window.clearTimeout(id)
   }, [lastNewRequest])
+
+  useEffect(() => {
+    let alive = true
+    let intervalId = 0
+    const load = async () => {
+      try {
+        setMetricsError('')
+        const { data: sessionData } = await supabase.auth.getSession()
+        const accessToken = sessionData?.session?.access_token
+        const { data, error } = await supabase.functions.invoke('site-metrics', {
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          body: { action: 'stats' },
+        })
+        if (!alive) return
+        if (error) throw error
+        if (!data?.ok) throw new Error(data?.error || 'Nu am putut încărca statisticile.')
+        setMetrics({
+          online: Number(data?.online_now || 0),
+          visitors: Number(data?.visitors_total || 0),
+          accounts: Number(data?.accounts_total || 0),
+        })
+      } catch (err) {
+        if (!alive) return
+        setMetricsError(err?.message || 'Nu am putut încărca statisticile.')
+      }
+    }
+    Promise.resolve().then(load)
+    intervalId = window.setInterval(load, 15_000)
+    return () => {
+      alive = false
+      if (intervalId) window.clearInterval(intervalId)
+    }
+  }, [])
 
   const today = useMemo(() => {
     return new Date().toLocaleDateString('ro-RO', {
@@ -218,6 +253,21 @@ export default function AdminDashboard() {
                   Revino pe homepage
                 </Link>
 
+                <div className="hidden items-center gap-2 md:flex">
+                  <div className="rounded-2xl border border-border bg-white px-4 py-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Online acum</div>
+                    <div className="mt-0.5 text-sm font-semibold text-text-dark">{metrics.online}</div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-white px-4 py-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Vizitatori total</div>
+                    <div className="mt-0.5 text-sm font-semibold text-text-dark">{metrics.visitors}</div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-white px-4 py-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Conturi create</div>
+                    <div className="mt-0.5 text-sm font-semibold text-text-dark">{metrics.accounts}</div>
+                  </div>
+                </div>
+
                 <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-text-dark">
                   Cereri noi:{' '}
                   <span className="ml-1 inline-flex items-center justify-center rounded-full bg-brand-light px-2 py-0.5 text-brand-dark">
@@ -229,6 +279,11 @@ export default function AdminDashboard() {
           </header>
 
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+            {metricsError ? (
+              <div className="mb-4 rounded-2xl border border-border bg-white px-4 py-3 text-xs text-red-600">
+                {metricsError}
+              </div>
+            ) : null}
             <AnimatePresence mode="wait">
               <MotionDiv
                 key={pathname}

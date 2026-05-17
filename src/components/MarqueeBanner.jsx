@@ -1,6 +1,6 @@
 export default function MarqueeBanner() {
   const text =
-    'Mobilă la comandă · Materiale premium · Garanție 5 ani · Livrare în România · Design personalizat · '
+    'Mobilă la comandă · Materiale premium · Garanție 2 ani · Livrare în București · Design personalizat · '
 
   return (
     <section className="border-y border-border bg-white py-3">
