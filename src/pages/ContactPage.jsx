@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Mail, MapPin, Phone, User, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -19,17 +20,68 @@ export default function ContactPage() {
   const [agreed, setAgreed] = useState(false)
   const [formError, setFormError] = useState('')
   const [successOpen, setSuccessOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     setFormError('')
+    if (loading) return
     if (!agreed) {
       setFormError('Confirmă acordul GDPR pentru a trimite mesajul.')
       return
     }
-    setSuccessOpen(true)
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      setFormError('Completează numele, emailul și mesajul.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setFormError('Email invalid.')
+      return
+    }
+    if (!isSupabaseConfigured) {
+      setFormError('Momentan nu putem trimite mesajul. Te rugăm să revii mai târziu.')
+      return
+    }
+    setLoading(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('contact-email', {
+        body: { name: name.trim(), email: email.trim(), phone: phone.trim(), message: message.trim() },
+      })
+      if (error) {
+        const ctx = error?.context
+        const status = ctx?.status
+        const rawBody =
+          typeof ctx?.body === 'string'
+            ? ctx.body
+            : ctx?.body
+              ? JSON.stringify(ctx.body)
+              : ''
+
+        if (rawBody) {
+          try {
+            const payload = JSON.parse(rawBody)
+            throw new Error(payload?.error || payload?.message || `Eroare server (${status || 'unknown'}).`)
+          } catch {
+            throw new Error(rawBody)
+          }
+        }
+
+        throw new Error(error?.message || `Eroare server (${status || 'unknown'}).`)
+      }
+      if (!data?.ok) throw new Error(data?.error || 'Nu am putut trimite mesajul.')
+      setSuccessOpen(true)
+      setName('')
+      setEmail('')
+      setPhone('')
+      setMessage('')
+      setAgreed(false)
+    } catch (err) {
+      setFormError(err?.message || 'Nu am putut trimite mesajul.')
+    } finally {
+      setLoading(false)
+    }
   }
-  const canSubmit = agreed
+  const canSubmit = agreed && !loading
 
   return (
     <div className="bg-cream">
@@ -144,7 +196,7 @@ export default function ContactPage() {
                   canSubmit ? '' : 'cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-soft',
                 ].join(' ')}
               >
-                <span className="flex-1 text-center">Trimite</span>
+                <span className="flex-1 text-center">{loading ? 'Se trimite…' : 'Trimite'}</span>
                 <span className="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition-all duration-300 group-hover:bg-white/20 group-hover:translate-x-0.5">
                   <ArrowRight className="h-4 w-4" />
                 </span>

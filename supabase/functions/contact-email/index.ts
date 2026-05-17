@@ -1,6 +1,9 @@
-import { corsHeaders } from '../_shared/cors.ts'
-
 Deno.serve(async (req) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -84,9 +87,30 @@ Deno.serve(async (req) => {
       }),
     })
 
-    const out = await response.json().catch(() => null)
+    const rawText = await response.text().catch(() => '')
+    let out: any = null
+    if (rawText) {
+      try {
+        out = JSON.parse(rawText)
+      } catch {
+        out = null
+      }
+    }
     if (!response.ok) {
-      return json({ ok: false, error: out?.message || 'Brevo request failed' }, 400)
+      console.error('brevo_error', {
+        status: response.status,
+        message: out?.message || out?.error || rawText || 'Brevo request failed',
+        fromEmail,
+        toEmail,
+      })
+      return json(
+        {
+          ok: false,
+          error: out?.message || out?.error || rawText || 'Brevo request failed',
+          brevo_status: response.status,
+        },
+        400,
+      )
     }
 
     return json({ ok: true }, 200)
@@ -97,4 +121,3 @@ Deno.serve(async (req) => {
     })
   }
 })
-
