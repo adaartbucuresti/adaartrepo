@@ -25,6 +25,18 @@ import AdminCarousel from './pages/admin/AdminCarousel.jsx'
 import AdminTestimonials from './pages/admin/AdminTestimonials.jsx'
 
 function PublicLayout() {
+  return (
+    <div className="min-h-dvh bg-cream text-text-dark">
+      <Navbar />
+      <main className="pt-28">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
+export default function App() {
   useEffect(() => {
     if (!isSupabaseConfigured) return
     let intervalId = 0
@@ -41,18 +53,6 @@ function PublicLayout() {
     }
   }, [])
 
-  return (
-    <div className="min-h-dvh bg-cream text-text-dark">
-      <Navbar />
-      <main className="pt-28">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
-  )
-}
-
-export default function App() {
   return (
     <>
       <SmoothScroll />
