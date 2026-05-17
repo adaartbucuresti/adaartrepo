@@ -96,7 +96,6 @@ export default function HeroCarousel() {
       {loading ? (
         <>
           <div className="absolute inset-0 bg-warm" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(45,54,46,0.82)_28%,transparent)]" />
           <div className="relative mx-auto flex h-full max-w-6xl items-center px-4">
             <div className="w-full max-w-xl">
               <div className="h-8 w-40 rounded-full bg-white/20" />
@@ -129,7 +128,6 @@ export default function HeroCarousel() {
                   className="h-full w-full object-cover"
                   loading="eager"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(45,54,46,0.8)_30%,transparent)]" />
               </div>
 
               <div className="relative mx-auto flex h-full max-w-6xl items-center px-4">
@@ -183,7 +181,7 @@ export default function HeroCarousel() {
                   >
                     <Link
                       to={active.ctaLink}
-                      className="inline-flex items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-mid"
+                      className="inline-flex items-center justify-center rounded-full bg-brand-mid px-7 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-primary"
                     >
                       {active.cta}
                     </Link>

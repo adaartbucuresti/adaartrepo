@@ -24,8 +24,17 @@ Deno.serve(async (req) => {
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
-  const body = await req.json().catch(() => null)
-  const action = String(body?.action || '').trim()
+  const rawBody = await req.text().catch(() => '')
+  let body: any = null
+  if (rawBody) {
+    try {
+      body = JSON.parse(rawBody)
+    } catch {
+      body = null
+    }
+  }
+
+  const action = String(body?.action || '').trim() || (req.method === 'POST' ? 'track' : '')
   if (!action) return json({ ok: false, error: 'Missing action' }, 400)
 
   const getClientIp = () => {
