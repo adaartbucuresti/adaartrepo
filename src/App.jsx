@@ -40,16 +40,25 @@ export default function App() {
   useEffect(() => {
     if (!isSupabaseConfigured) return
     let intervalId = 0
+    let alive = true
     const track = async () => {
+      if (!alive) return
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       try {
         await supabase.functions.invoke('site-metrics', { body: { action: 'track' } })
       } catch {
       }
     }
     Promise.resolve().then(track)
-    intervalId = window.setInterval(track, 20_000)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') Promise.resolve().then(track)
+    }
+    window.addEventListener('visibilitychange', onVisibility)
+    intervalId = window.setInterval(track, 8_000)
     return () => {
+      alive = false
       if (intervalId) window.clearInterval(intervalId)
+      window.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 

@@ -90,34 +90,68 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let alive = true
-    let intervalId = 0
-    const load = async () => {
+    let token = ''
+    let statsIntervalId = 0
+    let onlineIntervalId = 0
+
+    const getToken = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        token = String(sessionData?.session?.access_token || '')
+      } catch (err) {
+      }
+    }
+
+    const loadStats = async () => {
       try {
         setMetricsError('')
-        const { data: sessionData } = await supabase.auth.getSession()
-        const accessToken = sessionData?.session?.access_token
+        if (!token) await getToken()
         const { data, error } = await supabase.functions.invoke('site-metrics', {
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           body: { action: 'stats' },
         })
         if (!alive) return
         if (error) throw error
         if (!data?.ok) throw new Error(data?.error || 'Nu am putut încărca statisticile.')
-        setMetrics({
-          online: Number(data?.online_now || 0),
+        setMetrics((prev) => ({
+          ...prev,
           visitors: Number(data?.visitors_total || 0),
           accounts: Number(data?.accounts_total || 0),
-        })
+        }))
       } catch (err) {
         if (!alive) return
         setMetricsError(err?.message || 'Nu am putut încărca statisticile.')
       }
     }
-    Promise.resolve().then(load)
-    intervalId = window.setInterval(load, 15_000)
+
+    const loadOnline = async () => {
+      try {
+        if (!token) await getToken()
+        const { data, error } = await supabase.functions.invoke('site-metrics', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          body: { action: 'online' },
+        })
+        if (!alive) return
+        if (error) throw error
+        if (!data?.ok) throw new Error(data?.error || 'Nu am putut încărca online.')
+        setMetrics((prev) => ({ ...prev, online: Number(data?.online_now || 0) }))
+      } catch {
+      }
+    }
+
+    Promise.resolve()
+      .then(getToken)
+      .then(async () => {
+        await loadStats()
+        await loadOnline()
+      })
+
+    statsIntervalId = window.setInterval(loadStats, 20_000)
+    onlineIntervalId = window.setInterval(loadOnline, 3_000)
     return () => {
       alive = false
-      if (intervalId) window.clearInterval(intervalId)
+      if (statsIntervalId) window.clearInterval(statsIntervalId)
+      if (onlineIntervalId) window.clearInterval(onlineIntervalId)
     }
   }, [])
 

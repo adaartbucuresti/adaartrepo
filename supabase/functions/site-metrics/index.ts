@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     if (profileError) return json({ ok: false, error: profileError.message }, 400)
     if (profileRow?.role !== 'admin') return json({ ok: false, error: 'Forbidden' }, 403)
 
-    const cutoff = new Date(Date.now() - 45_000).toISOString()
+    const cutoff = new Date(Date.now() - 15_000).toISOString()
 
     const [{ count: onlineCount, error: onlineError }, { count: totalVisitors, error: visitorsError }, { count: totalAccounts, error: accountsError }] =
       await Promise.all([
@@ -109,6 +109,37 @@ Deno.serve(async (req) => {
       },
       200,
     )
+  }
+
+  if (action === 'online') {
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    if (!token) return json({ ok: false, error: 'Missing bearer token' }, 401)
+
+    const supabaseUser = createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    })
+
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser(token)
+    const user = userData?.user
+    if (userError || !user) return json({ ok: false, error: 'Unauthorized' }, 401)
+
+    const { data: profileRow, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (profileError) return json({ ok: false, error: profileError.message }, 400)
+    if (profileRow?.role !== 'admin') return json({ ok: false, error: 'Forbidden' }, 403)
+
+    const cutoff = new Date(Date.now() - 15_000).toISOString()
+    const { count, error } = await supabaseAdmin
+      .from('site_visitors')
+      .select('id', { count: 'exact', head: true })
+      .gte('last_seen_at', cutoff)
+    if (error) return json({ ok: false, error: error.message }, 400)
+
+    return json({ ok: true, online_now: count || 0 }, 200)
   }
 
   return json({ ok: false, error: 'Unknown action' }, 400)
