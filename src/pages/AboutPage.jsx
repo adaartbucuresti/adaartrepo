@@ -162,8 +162,8 @@ export default function AboutPage() {
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {[
               { k: '500+', v: 'proiecte finalizate' },
-              { k: '5 ani', v: 'garanție' },
-              { k: '30 zile', v: 'livrare medie' },
+              { k: '2 ani', v: 'garanție' },
+              { k: '5–30 zile', v: 'livrare medie' },
             ].map((s) => (
               <MotionDiv
                 key={s.k}

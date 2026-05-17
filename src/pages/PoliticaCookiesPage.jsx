@@ -25,20 +25,21 @@ export default function PoliticaCookiesPage() {
 
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-white/90 px-4 py-2 text-xs font-semibold text-text-dark shadow-soft backdrop-blur">
               <Cookie className="h-4 w-4 text-brand-mid" />
-              Cookies tehnice
+              Cookies & stocare locală
             </div>
 
             <h1 className="mt-4 font-heading text-4xl font-semibold text-text-dark md:text-5xl">
               Politica Cookie-uri
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-text-muted">
-              Această pagină explică ce sunt cookie-urile și cum sunt folosite pe site.
+              Această pagină explică ce sunt cookie-urile și tehnologiile similare (ex. localStorage) și cum sunt folosite pe
+              website-ul nostru.
             </p>
 
             <div className="mt-6 grid gap-3 md:grid-cols-3">
               <InfoCard icon={ShieldCheck} title="Tip" value="Tehnice & necesare" />
-              <InfoCard icon={Info} title="Control" value="Setări browser" />
-              <InfoCard icon={Cookie} title="Tracking" value="Fără analytics/pixel" />
+              <InfoCard icon={Info} title="Control" value="Browser + date site" />
+              <InfoCard icon={Cookie} title="Tracking" value="Fără analytics/pixel (acum)" />
             </div>
           </MotionDiv>
         </div>
@@ -50,45 +51,126 @@ export default function PoliticaCookiesPage() {
             <div className="sticky top-32 rounded-2xl border border-border bg-white p-6 shadow-soft">
               <div className="text-sm font-semibold text-text-dark">Cuprins</div>
               <div className="mt-4 grid gap-2 text-sm">
-                <a className={tocLinkClass} href="#ce-sunt">Ce sunt cookie-urile</a>
-                <a className={tocLinkClass} href="#ce-folosim">Ce cookie-uri folosim</a>
-                <a className={tocLinkClass} href="#dezactivare">Cum pot fi dezactivate</a>
-                <a className={tocLinkClass} href="#analytics">Google Analytics / Pixel</a>
+                <a className={tocLinkClass} href="#introducere">Introducere</a>
+                <a className={tocLinkClass} href="#tehnologii">Cookie-uri și tehnologii similare</a>
+                <a className={tocLinkClass} href="#necesare">Ce folosim pe site (necesar)</a>
+                <a className={tocLinkClass} href="#terti">Servicii terțe (Google Maps)</a>
+                <a className={tocLinkClass} href="#control">Cum poți controla / șterge</a>
+                <a className={tocLinkClass} href="#analytics">Analytics / Pixel</a>
+                <a className={tocLinkClass} href="#contact">Contact</a>
               </div>
             </div>
           </aside>
 
           <div className="lg:col-span-8">
             <div className="grid gap-6">
-              <Section id="ce-sunt" title="Ce sunt cookie-urile">
+              <Section id="introducere" title="Introducere">
                 <p>
-                  Cookie-urile sunt fișiere mici stocate în browserul tău, care ajută la funcționarea corectă a site-ului și
-                  la îmbunătățirea experienței.
+                  Operatorul website-ului este <span className="font-semibold text-text-dark">ADA ART MOB SRL</span>. Pentru
+                  întrebări legate de confidențialitate și cookies ne poți contacta la{' '}
+                  <a
+                    className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark"
+                    href="mailto:mobdesign.ro@outlook.com"
+                  >
+                    mobdesign.ro@outlook.com
+                  </a>
+                  .
+                </p>
+                <p>
+                  Pentru detalii despre prelucrarea datelor personale (GDPR), consultă{' '}
+                  <Link
+                    to="/politica-confidentialitate"
+                    className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark"
+                  >
+                    Politica de Confidențialitate
+                  </Link>
+                  .
                 </p>
               </Section>
 
-              <Section id="ce-folosim" title="Ce cookie-uri folosim">
-                <p>Folosim cookie-uri tehnice necesare funcționării site-ului, precum:</p>
+              <Section id="tehnologii" title="Cookie-uri și tehnologii similare">
+                <p>
+                  Cookie-urile sunt fișiere mici stocate în browserul tău. În plus, unele aplicații web folosesc și tehnologii
+                  similare, precum <span className="font-semibold text-text-dark">localStorage</span> sau{' '}
+                  <span className="font-semibold text-text-dark">sessionStorage</span>, pentru a salva local anumite setări
+                  sau informații de sesiune.
+                </p>
+              </Section>
+
+              <Section id="necesare" title="Ce folosim pe site (necesar)">
+                <p>
+                  Website-ul este conceput să funcționeze fără cookies de marketing sau analytics. Folosim strict ceea ce este
+                  necesar pentru funcționare și securitate.
+                </p>
                 <ul className="grid gap-2">
-                  <Bullet>cookie-uri de sesiune</Bullet>
-                  <Bullet>cookie-uri de autentificare</Bullet>
+                  <Bullet>
+                    <span className="font-semibold text-text-dark">Autentificare și sesiune cont</span> (stocare locală) – pentru
+                    menținerea sesiunii după login și pentru funcții precum „Contul meu”.
+                  </Bullet>
+                  <Bullet>
+                    <span className="font-semibold text-text-dark">Preferințe minime</span> – salvăm local acceptarea bannerului de
+                    informare cookies (ex.: o valoare de tip <span className="font-semibold text-text-dark">cookieConsent</span>).
+                  </Bullet>
+                </ul>
+                <p className="text-xs text-text-muted">
+                  Notă: când spunem „stocare locală”, ne referim în principal la localStorage/sessionStorage din browser.
+                </p>
+              </Section>
+
+              <Section id="terti" title="Servicii terțe (Google Maps)">
+                <p>
+                  În pagina de Contact afișăm o hartă încorporată prin{' '}
+                  <span className="font-semibold text-text-dark">Google Maps</span> (iframe). Atunci când harta este încărcată,
+                  <span className="font-semibold text-text-dark"> Google</span> poate seta propriile cookies/identificatori și poate
+                  colecta date conform politicilor sale.
+                </p>
+                <p className="text-xs text-text-muted">
+                  Poți consulta politicile Google aici: https://policies.google.com/technologies/cookies
+                </p>
+              </Section>
+
+              <Section id="control" title="Cum poți controla / șterge">
+                <p>Poți controla cookies și datele salvate local astfel:</p>
+                <ul className="grid gap-2">
+                  <Bullet>
+                    <span className="font-semibold text-text-dark">Din browser</span>: poți bloca sau șterge cookie-urile din setările
+                    browserului. Reține că dezactivarea cookie-urilor tehnice poate afecta funcționarea site-ului (ex. autentificarea).
+                  </Bullet>
+                  <Bullet>
+                    <span className="font-semibold text-text-dark">Ștergere date site</span>: poți șterge „Site data” / „Date site”
+                    (cookies + localStorage) pentru website-ul nostru din setările browserului.
+                  </Bullet>
+                  <Bullet>
+                    <span className="font-semibold text-text-dark">Google Maps</span>: dacă nu dorești cookies terțe, poți bloca cookies
+                    de la terți în browser; acest lucru poate afecta afișarea hărții.
+                  </Bullet>
                 </ul>
               </Section>
 
-              <Section id="dezactivare" title="Cum pot fi dezactivate din browser">
-                <p>
-                  Poți bloca sau șterge cookie-urile din setările browserului. Reține că dezactivarea cookie-urilor tehnice
-                  poate afecta funcționarea site-ului (de exemplu autentificarea).
-                </p>
-              </Section>
-
-              <Section id="analytics" title="Google Analytics / Pixel">
+              <Section id="analytics" title="Analytics / Pixel">
                 <div className="rounded-2xl border border-brand-primary/15 bg-brand-light p-5">
                   <div className="text-xs font-semibold text-brand-dark">Status tracking</div>
                   <div className="mt-2 text-sm font-semibold text-text-dark">
                     În prezent, site-ul nu folosește Google Analytics sau Facebook Pixel.
                   </div>
+                  <div className="mt-2 text-xs text-text-muted">
+                    Dacă pe viitor vom introduce astfel de servicii, vom actualiza această pagină și vom implementa un mecanism de consimțământ
+                    pentru cookies neesențiale.
+                  </div>
                 </div>
+              </Section>
+
+              <Section id="contact" title="Contact">
+                <p>
+                  Pentru întrebări legate de cookies și confidențialitate, ne poți contacta la{' '}
+                  <a
+                    className="font-semibold text-brand-mid underline underline-offset-4 hover:text-brand-dark"
+                    href="mailto:mobdesign.ro@outlook.com"
+                  >
+                    mobdesign.ro@outlook.com
+                  </a>
+                  .
+                </p>
               </Section>
             </div>
           </div>

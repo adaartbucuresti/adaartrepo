@@ -153,17 +153,17 @@ export default function MyAccountPage() {
     setDeleteLoading(true)
     try {
       if (!isSupabaseConfigured) throw new Error('Supabase nu este configurat.')
-      const { error: fnError } = await supabase.functions.invoke('delete-account')
-      if (!fnError) {
-        await signOut()
-        return
-      }
-      if (email) {
-        const { error: reqErr } = await supabase.from('configurator_requests').delete().eq('client_email', email)
-        if (reqErr) throw reqErr
-      }
-      const { error: profErr } = await supabase.from('profiles').delete().eq('id', user.id)
-      if (profErr) throw profErr
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) throw sessionError
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) throw new Error('Sesiune invalidă. Te rugăm să te reautentifici.')
+
+      const { data, error: fnError } = await supabase.functions.invoke('delete-account', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (fnError) throw fnError
+      if (!data?.ok) throw new Error(data?.error || 'Nu am putut confirma ștergerea contului.')
+      setDeleteOpen(false)
       await signOut()
     } catch (err) {
       setDeleteError(err?.message || 'Nu am putut șterge datele. Încearcă din nou.')
