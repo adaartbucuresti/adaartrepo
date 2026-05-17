@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: 'Unauthorized' }, 401)
   }
 
-  const email = String(user.email || '').trim()
+  const email = String(user.email || '').trim().toLowerCase()
 
   if (email) {
     const { error } = await supabaseAdmin.from('configurator_requests').delete().eq('client_email', email)

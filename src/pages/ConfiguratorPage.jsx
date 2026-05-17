@@ -592,18 +592,32 @@ export default function ConfiguratorPage() {
       return
     }
 
+    const typedEmail = email.trim()
+    const typedEmailNormalized = typedEmail.toLowerCase()
+    let accountEmailNormalized = ''
+    if (isSupabaseConfigured) {
+      const { data: userData } = await supabase.auth.getUser()
+      const accountEmail = String(userData?.user?.email || '').trim()
+      if (accountEmail) accountEmailNormalized = accountEmail.toLowerCase()
+    }
+
     const notesParts = []
     if (productType === 'Alt produs') {
       notesParts.push(`Alt produs: ${productName.trim()}\n${otherDescription.trim()}`)
+    }
+    if (accountEmailNormalized && typedEmailNormalized && typedEmailNormalized !== accountEmailNormalized) {
+      notesParts.push(`Email completat în configurator: ${typedEmail}`)
     }
     if (notes.trim()) notesParts.push(notes.trim())
     if (extrasCustomText.trim()) notesParts.push(`Alte opțiuni: ${extrasCustomText.trim()}`)
     const combinedNotes = notesParts.length ? notesParts.join('\n\n') : null
 
+    const requestEmail = accountEmailNormalized || typedEmailNormalized
+
     setSubmitLoading(true)
     const { error } = await supabase.from('configurator_requests').insert({
       client_name: fullName.trim(),
-      client_email: email.trim(),
+      client_email: requestEmail,
       client_phone: phone.trim(),
       client_notes: combinedNotes,
       product_type: productType,

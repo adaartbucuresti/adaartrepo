@@ -146,7 +146,7 @@ export default function MyAccountPage() {
     setPortalNode(document.body)
   }, [])
 
-  const email = String(user?.email || '').trim()
+  const email = String(user?.email || '').trim().toLowerCase()
   const deleteAccountAndData = async () => {
     if (!user) return
     setDeleteError('')
