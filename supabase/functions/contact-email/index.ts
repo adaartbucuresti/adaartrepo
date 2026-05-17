@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     if (!brevoApiKey) return json({ ok: false, error: 'Missing BREVO_API_KEY' }, 500)
 
     const toEmail = Deno.env.get('CONTACT_TO_EMAIL') || 'mobdesign.ro@outlook.com'
-    const fromEmail = Deno.env.get('CONTACT_FROM_EMAIL') || 'mobdesign.ro@outlook.com'
-    const fromName = Deno.env.get('CONTACT_FROM_NAME') || 'ADA ART'
+    const fromEmail = Deno.env.get('CONTACT_FROM_EMAIL') || 'support@adaart.ro'
+    const fromName = Deno.env.get('CONTACT_FROM_NAME') || 'ADA ART MOB SRL'
 
     const body = await req.json().catch(() => null)
     const name = String(body?.name || '').trim()

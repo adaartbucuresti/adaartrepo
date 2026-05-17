@@ -184,7 +184,12 @@ export default function AuthPage() {
     }
     setResendLoading(true)
     try {
-      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() })
+      const redirectTo = `${window.location.origin}/finalizare-cont`
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: redirectTo },
+      })
       if (resendError) throw resendError
       setVerifySuccess('Ți-am retrimis emailul de confirmare.')
     } catch (err) {
