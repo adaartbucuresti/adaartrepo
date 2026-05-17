@@ -129,8 +129,8 @@ export default function AdminCarousel() {
       setFormError('Fișierul selectat nu este o imagine.')
       return
     }
-    if (file.size > 6 * 1024 * 1024) {
-      setFormError('Imaginea este prea mare (max 6MB).')
+    if (file.size > 10 * 1024 * 1024) {
+      setFormError('Imaginea este prea mare (max 10MB).')
       return
     }
 
