@@ -8,7 +8,7 @@ const noteText =
   'Toate produsele sunt realizate la comandă. Nu există stoc. Configurezi, trimiți cererea, și un specialist te contactează cu oferta personalizată.'
 
 const navLinks = [
-  { label: 'Acasă', to: '/' },
+  { label: 'Comenzi', to: '/mobila-la-comanda-bucuresti/' },
   { label: 'Produse', to: '/produse' },
   { label: 'Configurator', to: '/configurator' },
   { label: 'Despre', to: '/despre' },

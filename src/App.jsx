@@ -18,6 +18,8 @@ import TermeniConditiiPage from './pages/TermeniConditiiPage.jsx'
 import PoliticaCookiesPage from './pages/PoliticaCookiesPage.jsx'
 import AuthPage from './pages/AuthPage.jsx'
 import MyAccountPage from './pages/MyAccountPage.jsx'
+import MobilaLaComandaBucurestiPage from './pages/MobilaLaComandaBucurestiPage.jsx'
+import MobilaLaComandaBucurestiSector2Page from './pages/MobilaLaComandaBucurestiSector2Page.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminRequests from './pages/admin/AdminRequests.jsx'
 import AdminProducts from './pages/admin/AdminProducts.jsx'
@@ -75,6 +77,16 @@ export default function App() {
           <Route path="/cont" element={<MyAccountPage />} />
           <Route path="/despre" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route
+            path="/mobila-la-comanda-bucuresti"
+            element={<Navigate to="/mobila-la-comanda-bucuresti/" replace />}
+          />
+          <Route path="/mobila-la-comanda-bucuresti/" element={<MobilaLaComandaBucurestiPage />} />
+          <Route
+            path="/mobila-la-comanda-bucuresti-sector-2"
+            element={<Navigate to="/mobila-la-comanda-bucuresti-sector-2/" replace />}
+          />
+          <Route path="/mobila-la-comanda-bucuresti-sector-2/" element={<MobilaLaComandaBucurestiSector2Page />} />
           <Route path="/politica-confidentialitate" element={<PoliticaConfidentialitatePage />} />
           <Route path="/termeni-conditii" element={<TermeniConditiiPage />} />
           <Route path="/politica-cookies" element={<PoliticaCookiesPage />} />

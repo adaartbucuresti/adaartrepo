@@ -43,6 +43,9 @@ export default function Footer() {
             <Link className="text-text-muted hover:text-brand-mid" to="/">
               Acasă
             </Link>
+            <Link className="text-text-muted hover:text-brand-mid" to="/mobila-la-comanda-bucuresti/">
+              Mobilă la comandă București
+            </Link>
             <Link className="text-text-muted hover:text-brand-mid" to="/produse">
               Produse
             </Link>
