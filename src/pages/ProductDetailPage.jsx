@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { Check, Minus, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard.jsx'
@@ -15,6 +15,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
 
   const [activeIdx, setActiveIdx] = useState(0)
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [zoom, setZoom] = useState(1)
 
   const images = product?.images?.length ? product.images : product ? [product.image] : []
   const activeImg = images[activeIdx] || images[0]
@@ -78,6 +80,23 @@ export default function ProductDetailPage() {
     }
   }, [id])
 
+  useEffect(() => {
+    if (!viewerOpen) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setViewerOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [viewerOpen])
+
+  useEffect(() => {
+    if (!viewerOpen) return
+    setZoom(1)
+  }, [viewerOpen, activeIdx])
+
+  const zoomIn = () => setZoom((z) => Math.min(4, Math.round((z + 0.5) * 10) / 10))
+  const zoomOut = () => setZoom((z) => Math.max(1, Math.round((z - 0.5) * 10) / 10))
+
   const similar = useMemo(() => {
     if (similarItems.length) return similarItems
     if (!product) return []
@@ -124,11 +143,20 @@ export default function ProductDetailPage() {
 
         <div className="mt-10 grid gap-10 lg:grid-cols-2">
           <div>
-            <div className="overflow-hidden rounded-2xl border border-border bg-white">
+            <button
+              type="button"
+              onClick={() => setViewerOpen(true)}
+              className="group relative w-full overflow-hidden rounded-2xl border border-border bg-white text-left"
+              aria-label="Deschide imaginea completă"
+            >
               <div className="aspect-[4/3]">
-                <img src={activeImg} alt={product.name} className="h-full w-full object-cover" />
+                <img
+                  src={activeImg}
+                  alt={product.name}
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+                />
               </div>
-            </div>
+            </button>
 
             {images.length > 1 ? (
               <div className="mt-4 flex gap-3">
@@ -202,6 +230,69 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {viewerOpen ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0"
+            aria-label="Închide"
+            onClick={() => setViewerOpen(false)}
+          />
+          <div className="relative w-full max-w-6xl">
+            <div className="pointer-events-none absolute -top-12 left-0 right-0 flex items-center justify-center gap-3">
+              <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-2 text-white backdrop-blur">
+                <button
+                  type="button"
+                  onClick={zoomOut}
+                  disabled={zoom <= 1}
+                  className={['inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10', zoom <= 1 ? 'opacity-60' : 'hover:bg-white/15'].join(' ')}
+                  aria-label="Zoom out"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <div className="min-w-20 text-center text-xs font-semibold">{Math.round(zoom * 100)}%</div>
+                <button
+                  type="button"
+                  onClick={zoomIn}
+                  disabled={zoom >= 4}
+                  className={['inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10', zoom >= 4 ? 'opacity-60' : 'hover:bg-white/15'].join(' ')}
+                  aria-label="Zoom in"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-white/15 bg-white/10 px-4 text-xs font-semibold hover:bg-white/15"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewerOpen(false)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 hover:bg-white/15"
+                  aria-label="Închide"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 backdrop-blur">
+              <div className="max-h-[82vh] overflow-auto">
+                <img
+                  src={activeImg}
+                  alt={product.name}
+                  style={{ width: `${Math.round(zoom * 100)}%` }}
+                  className="block h-auto max-w-none select-none"
+                  draggable="false"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

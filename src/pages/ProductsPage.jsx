@@ -24,6 +24,34 @@ export default function ProductsPage() {
   const [items, setItems] = useState(() => (isSupabaseConfigured ? [] : products))
   const [loading, setLoading] = useState(isSupabaseConfigured)
   const [loadError, setLoadError] = useState('')
+  const readLocalCategories = () => {
+    if (typeof localStorage === 'undefined') return []
+    try {
+      const raw = localStorage.getItem('product_categories_local_v1')
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) return []
+      const out = []
+      const seen = new Set()
+      for (const v of parsed) {
+        const name = String(v || '').trim()
+        if (!name) continue
+        const key = name.toLowerCase()
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push(name)
+      }
+      return out
+    } catch (e) {
+      void e
+      return []
+    }
+  }
+
+  const [categoryList, setCategoryList] = useState(() => {
+    const local = readLocalCategories()
+    return local.length ? ['Toate', ...local] : categories
+  })
 
   const filtered = useMemo(() => {
     if (!selected || selected === 'Toate') return items
@@ -73,6 +101,31 @@ export default function ProductsPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let alive = true
+    supabase
+      .from('product_categories')
+      .select('name')
+      .order('name', { ascending: true })
+      .then(({ data, error }) => {
+        if (!alive) return
+        if (error) {
+          const local = readLocalCategories()
+          if (local.length) setCategoryList(['Toate', ...local])
+          return
+        }
+        const list = (data || [])
+          .map((r) => String(r?.name || '').trim())
+          .filter(Boolean)
+        if (!list.length) return
+        setCategoryList(['Toate', ...list])
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   const setCategory = (c) => {
     if (!c || c === 'Toate') {
       params.delete('category')
@@ -114,7 +167,7 @@ export default function ProductsPage() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-2">
-          {categories.map((c) => {
+          {categoryList.map((c) => {
             const active = c === selected || (selected === 'Toate' && c === 'Toate')
             return (
               <button

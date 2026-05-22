@@ -1,11 +1,51 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ImageUp, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Check, ImageUp, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 
-const categories = ['Dulapuri', 'Paturi', 'Birouri', 'Biblioteci', 'Comode', 'Noptiere']
+const FALLBACK_CATEGORIES = ['Dulapuri', 'Paturi', 'Birouri', 'Biblioteci', 'Comode', 'Noptiere']
+const LOCAL_CATEGORIES_KEY = 'product_categories_local_v1'
 const DRAFT_KEY = 'admin_products_draft_v1'
 let productsDraftMemory = null
+
+const normalizeCategoryName = (value) => String(value || '').trim()
+
+const uniqueCategories = (list) => {
+  const out = []
+  const seen = new Set()
+  for (const raw of list || []) {
+    const name = normalizeCategoryName(raw)
+    if (!name) continue
+    const key = name.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(name)
+  }
+  return out
+}
+
+const readLocalCategories = () => {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(LOCAL_CATEGORIES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return uniqueCategories(parsed)
+  } catch (e) {
+    void e
+    return []
+  }
+}
+
+const writeLocalCategories = (list) => {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(LOCAL_CATEGORIES_KEY, JSON.stringify(uniqueCategories(list)))
+  } catch (e) {
+    void e
+  }
+}
 
 const readDraftFromStorage = () => {
   if (typeof sessionStorage === 'undefined') return null
@@ -61,7 +101,7 @@ const imageFileToDataUrl = async (file) => {
 const emptyForm = {
   id: null,
   name: '',
-  category: categories[0],
+  category: FALLBACK_CATEGORIES[0],
   price: '',
   price_label: '',
   description: '',
@@ -95,6 +135,34 @@ export default function AdminProducts() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
+  const [categoryRows, setCategoryRows] = useState([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [categoriesError, setCategoriesError] = useState('')
+  const [categoriesAvailable, setCategoriesAvailable] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [deletingCategoryId, setDeletingCategoryId] = useState('')
+  const [localCategories, setLocalCategories] = useState(() => readLocalCategories())
+  const [editingCategoryId, setEditingCategoryId] = useState('')
+  const [editingLocalCategory, setEditingLocalCategory] = useState('')
+  const [editCategoryName, setEditCategoryName] = useState('')
+  const [savingCategoryId, setSavingCategoryId] = useState('')
+
+  const setLocalCategoriesSafe = (next) => {
+    const list = uniqueCategories(next)
+    setLocalCategories(list)
+    writeLocalCategories(list)
+  }
+
+  const categoryOptions = useMemo(() => {
+    const fromDb = (categoryRows || [])
+      .map((r) => String(r.name || '').trim())
+      .filter(Boolean)
+    if (categoriesAvailable && fromDb.length) return fromDb
+    if (localCategories.length) return localCategories
+    return FALLBACK_CATEGORIES
+  }, [categoryRows, categoriesAvailable, localCategories])
+
   const load = async () => {
     setLoading(true)
     setError('')
@@ -112,9 +180,50 @@ export default function AdminProducts() {
     setLoading(false)
   }
 
+  const loadCategories = async () => {
+    setCategoriesLoading(true)
+    setCategoriesError('')
+    const { data, error: fetchError } = await supabase
+      .from('product_categories')
+      .select('id,name')
+      .order('name', { ascending: true })
+    if (fetchError) {
+      setCategoriesAvailable(false)
+      setCategoryRows([])
+      setCategoriesError(fetchError.message)
+      setCategoriesLoading(false)
+      return
+    }
+    let rows = Array.isArray(data) ? data : []
+    if (!rows.length) {
+      const seedPayload = FALLBACK_CATEGORIES.map((name) => ({ name }))
+      const { error: seedError } = await supabase.from('product_categories').insert(seedPayload)
+      if (!seedError) {
+        const { data: seeded, error: seededError } = await supabase
+          .from('product_categories')
+          .select('id,name')
+          .order('name', { ascending: true })
+        if (!seededError) rows = Array.isArray(seeded) ? seeded : rows
+      }
+    }
+    setCategoriesAvailable(true)
+    setCategoryRows(rows)
+    setCategoriesLoading(false)
+  }
+
   useEffect(() => {
-    Promise.resolve().then(() => load())
+    Promise.resolve()
+      .then(() => load())
+      .then(() => loadCategories())
   }, [])
+
+  useEffect(() => {
+    if (!modalOpen) return
+    if (form.category && String(form.category).trim()) return
+    const first = categoryOptions[0] || ''
+    if (!first) return
+    setForm((p) => ({ ...p, category: first }))
+  }, [categoryOptions, form.category, modalOpen])
 
   useEffect(() => {
     const nextDraft = modalOpen ? { modalOpen: true, form } : { modalOpen: false }
@@ -152,7 +261,7 @@ export default function AdminProducts() {
 
   const openNew = () => {
     setFormError('')
-    setForm({ ...emptyForm })
+    setForm({ ...emptyForm, category: categoryOptions[0] || emptyForm.category })
     setModalOpen(true)
   }
 
@@ -161,7 +270,7 @@ export default function AdminProducts() {
     setForm({
       id: p.id,
       name: p.name || '',
-      category: p.category || categories[0],
+      category: p.category || categoryOptions[0],
       price: p.price ?? '',
       price_label: p.price_label || '',
       description: p.description || '',
@@ -243,6 +352,134 @@ export default function AdminProducts() {
     await load()
   }
 
+  const addCategory = async () => {
+    const name = normalizeCategoryName(newCategoryName)
+    if (!name) return
+    setCategoriesError('')
+    const exists = categoryOptions.some((c) => c.toLowerCase() === name.toLowerCase())
+    if (exists) {
+      setCategoriesError('Categoria există deja.')
+      return
+    }
+    if (!categoriesAvailable) {
+      setLocalCategoriesSafe([...categoryOptions, name])
+      setNewCategoryName('')
+      return
+    }
+    setAddingCategory(true)
+    const { error: insertError } = await supabase.from('product_categories').insert({ name })
+    if (insertError) {
+      setCategoriesError(insertError.message)
+      setAddingCategory(false)
+      return
+    }
+    setNewCategoryName('')
+    setAddingCategory(false)
+    await loadCategories()
+  }
+
+  const deleteCategory = async (row) => {
+    if (!categoriesAvailable) return
+    if (!row?.id) return
+    const name = String(row?.name || '').trim()
+    const ok = window.confirm(`Ștergi categoria „${name || '—'}”?`)
+    if (!ok) return
+    setCategoriesError('')
+    setDeletingCategoryId(String(row.id))
+    const { error: delError } = await supabase.from('product_categories').delete().eq('id', row.id)
+    if (delError) {
+      setCategoriesError(delError.message)
+      setDeletingCategoryId('')
+      return
+    }
+    setDeletingCategoryId('')
+    await loadCategories()
+  }
+
+  const deleteLocalCategory = (name) => {
+    const ok = window.confirm(`Ștergi categoria „${name || '—'}”?`)
+    if (!ok) return
+    setLocalCategoriesSafe(categoryOptions.filter((c) => c.toLowerCase() !== String(name || '').toLowerCase()))
+  }
+
+  const startEditCategory = (arg) => {
+    setCategoriesError('')
+    if (arg && typeof arg === 'object' && arg.id) {
+      setEditingCategoryId(String(arg.id))
+      setEditingLocalCategory('')
+      setEditCategoryName(String(arg.name || '').trim())
+      return
+    }
+    const name = String(arg || '').trim()
+    setEditingLocalCategory(name)
+    setEditingCategoryId('')
+    setEditCategoryName(name)
+  }
+
+  const cancelEditCategory = () => {
+    setEditingCategoryId('')
+    setEditingLocalCategory('')
+    setEditCategoryName('')
+  }
+
+  const saveEditCategory = async (oldName, row) => {
+    const nextName = normalizeCategoryName(editCategoryName)
+    const previous = String(oldName || '').trim()
+    if (!nextName) return
+    if (nextName.toLowerCase() === previous.toLowerCase()) {
+      cancelEditCategory()
+      return
+    }
+    const exists = categoryOptions.some((c) => {
+      const s = String(c || '').trim()
+      if (!s) return false
+      if (s.toLowerCase() === previous.toLowerCase()) return false
+      return s.toLowerCase() === nextName.toLowerCase()
+    })
+    if (exists) {
+      setCategoriesError('Categoria există deja.')
+      return
+    }
+
+    if (!categoriesAvailable || !row?.id) {
+      const updated = categoryOptions.map((c) =>
+        String(c || '').trim().toLowerCase() === previous.toLowerCase() ? nextName : c,
+      )
+      setLocalCategoriesSafe(updated)
+      setNewCategoryName('')
+      setForm((p) => (p.category === previous ? { ...p, category: nextName } : p))
+      cancelEditCategory()
+      return
+    }
+
+    setSavingCategoryId(String(row.id))
+    setCategoriesError('')
+    const { error: updateError } = await supabase.from('product_categories').update({ name: nextName }).eq('id', row.id)
+    if (updateError) {
+      setCategoriesError(updateError.message)
+      setSavingCategoryId('')
+      return
+    }
+
+    const { error: productsUpdateError } = await supabase
+      .from('products')
+      .update({ category: nextName })
+      .eq('category', previous)
+    if (productsUpdateError) {
+      setCategoriesError(`Categoria a fost redenumită, dar nu am putut actualiza produsele: ${productsUpdateError.message}`)
+      setSavingCategoryId('')
+      cancelEditCategory()
+      await loadCategories()
+      return
+    }
+
+    setForm((p) => (p.category === previous ? { ...p, category: nextName } : p))
+    setSavingCategoryId('')
+    cancelEditCategory()
+    await loadCategories()
+    await load()
+  }
+
   const primaryImage = useMemo(() => {
     const url = (form.images || []).find((x) => x && x.trim())
     return url ? url.trim() : ''
@@ -307,7 +544,144 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+      <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-soft">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-text-dark">Categorii produse</div>
+            <div className="mt-0.5 text-xs text-text-muted">
+              Se folosesc la filtrul din pagina „Produse” și în câmpul „Categorie” la produs.
+            </div>
+          </div>
+          <div className="text-xs font-semibold text-text-muted">
+            {categoriesLoading ? 'Se încarcă…' : categoriesAvailable ? 'Din Supabase' : 'Local (browser)'}
+          </div>
+        </div>
+
+        {categoriesError ? (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+            {categoriesAvailable
+              ? `Nu pot salva/șterge în Supabase: ${categoriesError}`
+              : `Nu pot încărca „product_categories” din Supabase: ${categoriesError}`}
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(categoriesAvailable && (categoryRows || []).length ? categoryRows : categoryOptions).map((c) => {
+            const row = c && typeof c === 'object' ? c : null
+            const name = row ? String(row.name || '').trim() : String(c || '').trim()
+            const key = row?.id ? String(row.id) : name
+            const isEditing = row?.id
+              ? String(row.id) === String(editingCategoryId)
+              : editingLocalCategory && editingLocalCategory.toLowerCase() === name.toLowerCase()
+            const canEdit = !addingCategory
+            const canDelete = categoriesAvailable ? !!row?.id : true
+            const busy = (row?.id && savingCategoryId && String(row.id) === String(savingCategoryId)) || (row?.id && deletingCategoryId && String(row.id) === String(deletingCategoryId))
+            return (
+              <div
+                key={key}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-cream px-3 py-1 text-xs font-semibold text-text-dark"
+              >
+                {isEditing ? (
+                  <>
+                    <input
+                      value={editCategoryName}
+                      onChange={(e) => setEditCategoryName(e.target.value)}
+                      className="h-7 w-44 rounded-full border border-border bg-white px-3 text-xs font-semibold text-text-dark outline-none ring-brand-primary/30 focus:ring-2"
+                      disabled={busy}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => saveEditCategory(name, row)}
+                      disabled={busy || !String(editCategoryName || '').trim()}
+                      className={[
+                        'inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white text-text-dark transition hover:bg-cream',
+                        busy || !String(editCategoryName || '').trim() ? 'opacity-60' : '',
+                      ].join(' ')}
+                      aria-label="Salvează"
+                      title="Salvează"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditCategory}
+                      disabled={busy}
+                      className={['inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white text-text-dark transition hover:bg-cream', busy ? 'opacity-60' : ''].join(' ')}
+                      aria-label="Renunță"
+                      title="Renunță"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>{name}</span>
+                    <button
+                      type="button"
+                      onClick={() => startEditCategory(row || name)}
+                      disabled={!canEdit || busy}
+                      className={[
+                        'inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white text-text-dark transition hover:bg-cream',
+                        !canEdit || busy ? 'opacity-60' : '',
+                      ].join(' ')}
+                      aria-label={`Editează ${name}`}
+                      title="Editează"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    {canDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => (categoriesAvailable ? deleteCategory(row) : deleteLocalCategory(name))}
+                        disabled={busy}
+                        className={[
+                          'inline-flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-white text-red-700 transition hover:bg-red-50',
+                          busy ? 'opacity-60' : '',
+                        ].join(' ')}
+                        aria-label={`Șterge ${name}`}
+                        title="Șterge"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
+            placeholder="Adaugă o categorie nouă (ex: Bucătării)"
+            disabled={addingCategory}
+          />
+          <button
+            type="button"
+            onClick={addCategory}
+            disabled={addingCategory || !String(newCategoryName || '').trim()}
+            className={[
+              'inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-mid',
+              addingCategory || !String(newCategoryName || '').trim() ? 'opacity-60' : '',
+            ].join(' ')}
+          >
+            <Plus className="h-4 w-4" />
+            Adaugă
+          </button>
+        </div>
+
+        {!categoriesAvailable ? (
+          <div className="mt-3 text-xs text-text-muted">
+            Ca să le salvezi permanent în Supabase, creează tabela <span className="font-semibold">product_categories</span>.
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
         <div className="overflow-x-auto">
           <table className="min-w-[860px] w-full text-left text-sm">
             <thead className="bg-cream text-xs font-semibold text-text-muted">
@@ -450,7 +824,7 @@ export default function AdminProducts() {
                           onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
                           className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
                         >
-                          {categories.map((c) => (
+                          {categoryOptions.map((c) => (
                             <option key={c} value={c}>
                               {c}
                             </option>

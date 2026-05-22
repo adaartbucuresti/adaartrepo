@@ -1,12 +1,11 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import CategoryGrid from '../components/CategoryGrid.jsx'
 import HeroCarousel from '../components/HeroCarousel.jsx'
 import HowItWorks from '../components/HowItWorks.jsx'
 import MarqueeBanner from '../components/MarqueeBanner.jsx'
-import ProductCard from '../components/ProductCard.jsx'
 import Testimonials from '../components/Testimonials.jsx'
 import { products } from '../data/products.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
@@ -21,7 +20,22 @@ export default function HomePage() {
   const [items, setItems] = useState(() => (isSupabaseConfigured ? [] : products))
   const [loadingProducts, setLoadingProducts] = useState(isSupabaseConfigured)
   const [productsError, setProductsError] = useState('')
-  const featured = items.slice(0, 3)
+
+  const categoryCards = useMemo(() => {
+    const map = new Map()
+    for (const p of items || []) {
+      const category = String(p?.category || '').trim()
+      if (!category) continue
+      const image = String(p?.image || '').trim()
+      const current = map.get(category) || { category, image: '', count: 0 }
+      current.count += 1
+      if (!current.image && image) current.image = image
+      map.set(category, current)
+    }
+    return Array.from(map.values())
+      .sort((a, b) => (b.count || 0) - (a.count || 0))
+      .slice(0, 3)
+  }, [items])
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -79,10 +93,10 @@ export default function HomePage() {
           >
             <div>
               <h2 className="font-heading text-3xl font-semibold text-text-dark">
-                Produse recomandate
+                Categorii produse
               </h2>
               <p className="mt-2 text-sm text-text-muted">
-                Alege din toate modelele noastre populare si configureaza exact asa cum doresti
+                Alege categoria și vezi toate produsele disponibile.
               </p>
             </div>
 
@@ -114,12 +128,48 @@ export default function HomePage() {
               <div className="rounded-2xl border border-border bg-white p-6 text-sm text-red-600 shadow-soft md:col-span-2 lg:col-span-3">
                 {productsError}
               </div>
-            ) : featured.length === 0 ? (
+            ) : categoryCards.length === 0 ? (
               <div className="rounded-2xl border border-border bg-white p-6 text-sm text-text-muted shadow-soft md:col-span-2 lg:col-span-3">
                 Momentan nu sunt produse disponibile.
               </div>
             ) : (
-              featured.map((p) => <ProductCard key={p.id} product={p} />)
+              categoryCards.map((c) => (
+                <div
+                  key={c.category}
+                  className="group overflow-hidden rounded-3xl border border-border bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:border-brand-primary/25 hover:shadow-softLg"
+                >
+                  <Link to={`/produse?category=${encodeURIComponent(c.category)}`} className="block">
+                    <div className="relative aspect-[4/3] overflow-hidden bg-cream">
+                      {c.image ? (
+                        <img
+                          src={c.image}
+                          alt={c.category}
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                          loading="lazy"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,0.26),rgba(2,6,23,0)_55%)] opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+                    </div>
+                  </Link>
+
+                  <div className="p-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold uppercase tracking-widest text-text-dark">
+                        {c.category}
+                      </div>
+                      <div className="inline-flex min-w-8 items-center justify-center rounded-full bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand-dark ring-1 ring-brand-primary/20">
+                        {(c.count || 0) === 1 ? '1 produs' : `${c.count || 0} produse`}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/produse?category=${encodeURIComponent(c.category)}`}
+                      className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-brand-dark py-3.5 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-brand-primary hover:shadow-lg active:scale-[0.98]"
+                    >
+                      Vezi produse
+                    </Link>
+                  </div>
+                </div>
+              ))
             )}
           </div>
 
