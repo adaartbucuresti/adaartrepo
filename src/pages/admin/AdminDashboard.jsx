@@ -10,12 +10,14 @@ const navItems = [
   { to: '/admin/produse', label: 'Produse', icon: Package },
   { to: '/admin/carousel', label: 'Carousel', icon: PanelsTopLeft },
   { to: '/admin/testimoniale', label: 'Testimoniale', icon: MessageSquare },
+  { to: '/admin/portofoliu', label: 'Portofoliu', icon: LayoutGrid },
 ]
 
 const titleByPath = (pathname) => {
   if (pathname.includes('/admin/produse')) return 'Produse'
   if (pathname.includes('/admin/carousel')) return 'Carousel'
   if (pathname.includes('/admin/testimoniale')) return 'Testimoniale'
+  if (pathname.includes('/admin/portofoliu')) return 'Portofoliu'
   return 'Cereri configurator'
 }
 

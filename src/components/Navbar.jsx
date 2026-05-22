@@ -10,6 +10,7 @@ const noteText =
 const navLinks = [
   { label: 'Comenzi', to: '/mobila-la-comanda-bucuresti/' },
   { label: 'Produse', to: '/produse' },
+  { label: 'Portofoliu', to: '/portofoliu' },
   { label: 'Configurator', to: '/configurator' },
   { label: 'Despre', to: '/despre' },
   { label: 'Contact', to: '/contact' },

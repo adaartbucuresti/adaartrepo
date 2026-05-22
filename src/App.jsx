@@ -13,6 +13,7 @@ import ProductDetailPage from './pages/ProductDetailPage.jsx'
 import ConfiguratorPage from './pages/ConfiguratorPage.jsx'
 import AboutPage from './pages/AboutPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
+import PortfolioPage from './pages/PortfolioPage.jsx'
 import PoliticaConfidentialitatePage from './pages/PoliticaConfidentialitatePage.jsx'
 import TermeniConditiiPage from './pages/TermeniConditiiPage.jsx'
 import PoliticaCookiesPage from './pages/PoliticaCookiesPage.jsx'
@@ -25,6 +26,7 @@ import AdminRequests from './pages/admin/AdminRequests.jsx'
 import AdminProducts from './pages/admin/AdminProducts.jsx'
 import AdminCarousel from './pages/admin/AdminCarousel.jsx'
 import AdminTestimonials from './pages/admin/AdminTestimonials.jsx'
+import AdminPortfolio from './pages/admin/AdminPortfolio.jsx'
 
 function PublicLayout() {
   return (
@@ -75,6 +77,7 @@ export default function App() {
           <Route path="/produs/:id" element={<ProductDetailPage />} />
           <Route path="/configurator" element={<ConfiguratorPage />} />
           <Route path="/cont" element={<MyAccountPage />} />
+          <Route path="/portofoliu" element={<PortfolioPage />} />
           <Route path="/despre" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route
@@ -140,6 +143,7 @@ export default function App() {
           <Route path="produse" element={<AdminProducts />} />
           <Route path="carousel" element={<AdminCarousel />} />
           <Route path="testimoniale" element={<AdminTestimonials />} />
+          <Route path="portofoliu" element={<AdminPortfolio />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -53,13 +53,46 @@ const productTypeOptions = [
   { key: 'Alt produs', icon: Plus },
 ]
 
-const categoryToType = {
+const LOCAL_CATEGORIES_KEY = 'product_categories_local_v1'
+
+const readLocalCategories = () => {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(LOCAL_CATEGORIES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    const out = []
+    const seen = new Set()
+    for (const v of parsed) {
+      const name = String(v || '').trim()
+      if (!name) continue
+      const key = name.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(name)
+    }
+    return out
+  } catch (e) {
+    void e
+    return []
+  }
+}
+
+const categoryToTypeOverrides = {
   Dulapuri: 'Dressing / Dulap',
   Paturi: 'Dormitor (pat, noptiere, comode)',
   Birouri: 'Birou / Home office',
   Biblioteci: 'Bibliotecă / Rafturi',
   Comode: 'Dormitor (pat, noptiere, comode)',
   Noptiere: 'Dormitor (pat, noptiere, comode)',
+  Bucatarii: 'Bucătărie la comandă',
+  Bucătării: 'Bucătărie la comandă',
+  'Mobilier Baie': 'Baie (mască chiuvetă, dulapuri)',
+  Baie: 'Baie (mască chiuvetă, dulapuri)',
+  'Panouri TV': 'Mobilă TV / Perete TV',
+  'Panouri TV / Comode TV': 'Mobilă TV / Perete TV',
+  'Comode TV': 'Mobilă TV / Perete TV',
 }
 
 const dimensionRanges = {
@@ -123,12 +156,40 @@ function normalizeKey(value) {
     .replace(/\s+/g, ' ')
 }
 
+function mapCategoryToConfiguratorType(category) {
+  const raw = String(category || '').trim()
+  if (!raw) return null
+  const direct = categoryToTypeOverrides[raw]
+  if (direct) return direct
+  const key = normalizeKey(raw)
+  if (key.includes('bucatar')) return 'Bucătărie la comandă'
+  if (key.includes('baie')) return 'Baie (mască chiuvetă, dulapuri)'
+  if (key.includes('tv') || key.includes('panou')) return 'Mobilă TV / Perete TV'
+  if (key.includes('dressing') || key.includes('dulap')) return 'Dressing / Dulap'
+  if (key.includes('pat') || key.includes('noptier') || key.includes('comod') || key.includes('dormitor'))
+    return 'Dormitor (pat, noptiere, comode)'
+  if (key.includes('hol') || key.includes('pantofar')) return 'Hol (pantofar, cuier, oglindă, dulap)'
+  if (key.includes('birou')) return 'Birou / Home office'
+  if (key.includes('bibliotec') || key.includes('raft')) return 'Bibliotecă / Rafturi'
+  return 'Alt produs'
+}
+
+function iconForConfiguratorType(type) {
+  const found = productTypeOptions.find((x) => x.key === type)
+  return found?.icon || Square
+}
+
 export default function ConfiguratorPage() {
   const MotionDiv = motion.div
   const [params] = useSearchParams()
   const preselectedName = params.get('produs') || ''
   const preselectedId = params.get('produsId') || ''
   const [remotePreselected, setRemotePreselected] = useState(null)
+  const [categories, setCategories] = useState(() => {
+    const local = readLocalCategories()
+    if (local.length) return local
+    return ['Dulapuri', 'Paturi', 'Birouri', 'Biblioteci', 'Comode', 'Noptiere']
+  })
 
   const preselectedProduct = useMemo(() => {
     if (remotePreselected) return remotePreselected
@@ -174,13 +235,39 @@ export default function ConfiguratorPage() {
     }
   }, [preselectedId])
 
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let alive = true
+    supabase
+      .from('product_categories')
+      .select('name')
+      .order('name', { ascending: true })
+      .then(({ data, error }) => {
+        if (!alive) return
+        if (error) {
+          const local = readLocalCategories()
+          if (local.length) setCategories(local)
+          return
+        }
+        const list = (data || [])
+          .map((r) => String(r?.name || '').trim())
+          .filter(Boolean)
+        if (list.length) setCategories(list)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   const [step, setStep] = useState(1)
-  const mappedType = preselectedProduct ? categoryToType[preselectedProduct.category] : null
-  const initialType = mappedType || 'Dressing / Dulap'
+  const mappedType = preselectedProduct ? mapCategoryToConfiguratorType(preselectedProduct.category) : null
+  const initialType = mappedType && dimensionRanges[mappedType] ? mappedType : 'Dressing / Dulap'
+  const initialCategory = preselectedProduct?.category || ''
   const initialName = preselectedProduct?.name || (preselectedName ? preselectedName : '')
   const initialRange = dimensionRanges[initialType]
 
   const [productType, setProductType] = useState(initialType)
+  const [productCategory, setProductCategory] = useState(initialCategory)
   const [productName, setProductName] = useState(initialName)
   const [otherDescription, setOtherDescription] = useState('')
 
@@ -209,6 +296,19 @@ export default function ConfiguratorPage() {
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [stepError, setStepError] = useState('')
+
+  useEffect(() => {
+    if (productCategory) return
+    const first = categories[0]
+    if (!first) return
+    const mapped = mapCategoryToConfiguratorType(first) || 'Dressing / Dulap'
+    const nextRange = dimensionRanges[mapped] || dimensionRanges['Dressing / Dulap']
+    setProductCategory(first)
+    setProductType(mapped)
+    setWidthCm(mid(nextRange.w[0], nextRange.w[1]))
+    setHeightCm(mid(nextRange.h[0], nextRange.h[1]))
+    setDepthCm(mid(nextRange.d[0], nextRange.d[1]))
+  }, [categories, productCategory])
 
   const emailAllowed = useMemo(() => isAllowedEmail(email), [email])
   const totalFilesSize = useMemo(() => files.reduce((acc, f) => acc + (f?.size || 0), 0), [files])
@@ -270,13 +370,15 @@ export default function ConfiguratorPage() {
     lastHydratedKeyRef.current = contextKey
     hydratedRef.current = false
 
-    const mapped = preselectedProduct ? categoryToType[preselectedProduct.category] : null
-    const nextInitialType = mapped || 'Dressing / Dulap'
+    const nextInitialCategory = preselectedProduct?.category || ''
+    const mapped = preselectedProduct ? mapCategoryToConfiguratorType(preselectedProduct.category) : null
+    const nextInitialType = mapped && dimensionRanges[mapped] ? mapped : 'Dressing / Dulap'
     const nextInitialRange = dimensionRanges[nextInitialType] || dimensionRanges['Dressing / Dulap']
     const nextInitialName = preselectedProduct?.name || (preselectedName ? preselectedName : '')
 
     setStep(1)
     setProductType(nextInitialType)
+    setProductCategory(nextInitialCategory)
     setProductName(nextInitialName)
     setOtherDescription('')
     setWidthCm(mid(nextInitialRange.w[0], nextInitialRange.w[1]))
@@ -321,10 +423,22 @@ export default function ConfiguratorPage() {
       return Number.isFinite(nextStep) ? nextStep : s
     })
 
+    const nextCategory =
+      typeof draft.productCategory === 'string'
+        ? draft.productCategory
+        : typeof draft.product_type === 'string'
+          ? draft.product_type
+          : nextInitialCategory
+
+    setProductCategory(nextCategory)
+
+    const mappedFromCategory = mapCategoryToConfiguratorType(nextCategory) || nextInitialType
     const nextType =
       typeof draft.productType === 'string' && dimensionRanges[draft.productType]
         ? draft.productType
-        : nextInitialType
+        : mappedFromCategory && dimensionRanges[mappedFromCategory]
+          ? mappedFromCategory
+          : nextInitialType
 
     const nextRange = dimensionRanges[nextType] || nextInitialRange
 
@@ -384,9 +498,10 @@ export default function ConfiguratorPage() {
     const key = `id:${preselectedProduct.id}`
     if (appliedPreselectKeyRef.current === key) return
     appliedPreselectKeyRef.current = key
-    const mapped = categoryToType[preselectedProduct.category] || 'Dressing / Dulap'
+    const mapped = mapCategoryToConfiguratorType(preselectedProduct.category) || 'Dressing / Dulap'
     if (!dimensionRanges[mapped]) return
     setProductName(preselectedProduct.name)
+    setProductCategory(preselectedProduct.category || '')
     setProductType(mapped)
     setColorId('')
     setExtrasSelected([])
@@ -407,6 +522,7 @@ export default function ConfiguratorPage() {
           contextKey,
           step,
           productType,
+          productCategory,
           productName,
           widthCm,
           heightCm,
@@ -439,6 +555,7 @@ export default function ConfiguratorPage() {
     contextKey,
     step,
     productType,
+    productCategory,
     productName,
     widthCm,
     heightCm,
@@ -481,7 +598,7 @@ export default function ConfiguratorPage() {
     const custom = extrasCustomText.trim()
     const extrasLabel = custom ? `${extraText} · Alte opțiuni: ${custom}` : extraText
     return {
-      productType,
+      productType: productCategory || productType,
       productName: productName || undefined,
       dimensionsLabel: dims,
       materialLabel: selectedMaterial ? `${selectedMaterial.key} — ${selectedMaterial.pricePerMl} RON/ml` : material,
@@ -494,6 +611,7 @@ export default function ConfiguratorPage() {
     }
   }, [
     productType,
+    productCategory,
     productName,
     widthCm,
     heightCm,
@@ -511,10 +629,29 @@ export default function ConfiguratorPage() {
 
   const progress = useMemo(() => Math.round(((step - 1) / (steps.length - 1)) * 100), [step])
 
-  const selectProductType = (nextType) => {
-    const nextRange = dimensionRanges[nextType]
-    setProductType(nextType)
-    if (nextType === 'Alt produs') {
+  const categoryOptions = useMemo(() => {
+    const out = []
+    const seen = new Set()
+    for (const c of categories) {
+      const name = String(c || '').trim()
+      if (!name) continue
+      const key = name.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(name)
+    }
+    out.push('Alt produs')
+    return out
+  }, [categories])
+
+  const selectProductCategory = (nextCategory) => {
+    const categoryLabel = String(nextCategory || '').trim()
+    const effectiveCategory = categoryLabel || ''
+    const mapped = effectiveCategory === 'Alt produs' ? 'Alt produs' : mapCategoryToConfiguratorType(effectiveCategory) || 'Alt produs'
+    const nextRange = dimensionRanges[mapped] || dimensionRanges['Alt produs']
+    setProductCategory(effectiveCategory)
+    setProductType(mapped)
+    if (effectiveCategory === 'Alt produs') {
       setProductName('')
       setOtherDescription('')
     }
@@ -531,7 +668,7 @@ export default function ConfiguratorPage() {
   }
 
   const goNext = () => {
-    if (step === 1 && productType === 'Alt produs') {
+    if (step === 1 && productCategory === 'Alt produs') {
       if (!productName.trim()) {
         setStepError('Introdu titlul produsului.')
         return
@@ -553,7 +690,7 @@ export default function ConfiguratorPage() {
   const submit = async (e) => {
     e.preventDefault()
     setSubmitError('')
-    if (productType === 'Alt produs') {
+    if (productCategory === 'Alt produs') {
       if (!productName.trim()) {
         setSubmitError('Introdu titlul produsului.')
         return
@@ -602,7 +739,7 @@ export default function ConfiguratorPage() {
     }
 
     const notesParts = []
-    if (productType === 'Alt produs') {
+    if (productCategory === 'Alt produs') {
       notesParts.push(`Alt produs: ${productName.trim()}\n${otherDescription.trim()}`)
     }
     if (accountEmailNormalized && typedEmailNormalized && typedEmailNormalized !== accountEmailNormalized) {
@@ -620,7 +757,7 @@ export default function ConfiguratorPage() {
       client_email: requestEmail,
       client_phone: phone.trim(),
       client_notes: combinedNotes,
-      product_type: productType,
+      product_type: productCategory && productCategory !== 'Alt produs' ? productCategory : 'Alt produs',
       width_cm: widthCm,
       height_cm: heightCm,
       depth_cm: depthCm,
@@ -690,19 +827,17 @@ export default function ConfiguratorPage() {
               <div className="mt-8 space-y-10">
                 {step === 1 ? (
                   <div>
-                    <div className="text-sm font-semibold text-text-dark">Tipuri de produse (cele mai cumpărate)</div>
+                    <div className="text-sm font-semibold text-text-dark">Categorii produse</div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {productTypeOptions.map((o) => {
-                        const Icon = o.icon
-                        const active = o.key === productType
-                        const match = String(o.key).match(/^(.+?)\s*\((.+)\)\s*$/)
-                        const title = match ? match[1].trim() : o.key
-                        const subtitle = match ? `(${match[2].trim()})` : ''
+                      {categoryOptions.map((category) => {
+                        const mapped = category === 'Alt produs' ? 'Alt produs' : mapCategoryToConfiguratorType(category) || 'Alt produs'
+                        const Icon = iconForConfiguratorType(mapped)
+                        const active = category === productCategory
                         return (
                           <button
-                            key={o.key}
+                            key={category}
                             type="button"
-                            onClick={() => selectProductType(o.key)}
+                            onClick={() => selectProductCategory(category)}
                             className={[
                               'flex items-start gap-3 rounded-2xl border p-4 text-left transition',
                               active
@@ -714,15 +849,14 @@ export default function ConfiguratorPage() {
                               <Icon className="h-5 w-5" />
                             </span>
                             <div className="min-w-0">
-                              <div className="text-sm font-semibold text-text-dark">{title}</div>
-                              {subtitle ? <div className="mt-0.5 text-xs font-semibold text-brand-mid">{subtitle}</div> : null}
+                              <div className="text-sm font-semibold text-text-dark">{category}</div>
                             </div>
                           </button>
                         )
                       })}
                     </div>
 
-                    {productType === 'Alt produs' ? (
+                    {productCategory === 'Alt produs' ? (
                       <div className="mt-6 grid gap-4">
                         <div>
                           <label className="text-xs font-medium text-text-muted">Titlu produs</label>
