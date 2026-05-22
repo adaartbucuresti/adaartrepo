@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 export default function MobilaLaComandaBucurestiPage() {
   const title = 'Mobilă la comandă în București | ADA ART MOB'
@@ -74,7 +75,6 @@ export default function MobilaLaComandaBucurestiPage() {
   }, [canonicalUrl])
 
   const configuratorUrl = '/configurator'
-  const contactUrl = '/contact'
   const phoneDisplay = '+40 0722 648 175'
   const phoneTel = 'tel:+40722648175'
 
@@ -90,10 +90,12 @@ export default function MobilaLaComandaBucurestiPage() {
 
   const steps = useMemo(
     () => [
-      { title: 'Discuție inițială', text: 'Telefon/WhatsApp/email pentru nevoi, stil și buget.' },
-      { title: 'Cerere în configurator', text: 'Varianta rapidă: tip produs, dimensiuni, preferințe, poze.' },
+      {
+        title: 'Discuție inițială',
+        text: 'Telefon/WhatsApp/email pentru nevoi, stil și buget. Varianta rapidă: cerere în configurator (tip produs, dimensiuni, preferințe, poze).',
+      },
       { title: 'Clarificări + măsurători', text: 'Stabilim dimensiuni corecte; ne deplasăm în București când e cazul.' },
-      { title: 'Propunere / proiect', text: 'Schiță sau proiectare 3D, dacă se potrivește proiectului.' },
+      { title: 'Propunere / proiect', text: 'Schiță sau proiectare 3D, care sa se potriveasca proiectului.' },
       { title: 'Ofertă + confirmare', text: 'Primești ofertă clară și confirmăm varianta finală.' },
       { title: 'Execuție + montaj', text: 'Execuție în atelier, apoi montaj și verificare finală.' },
     ],
@@ -124,18 +126,6 @@ export default function MobilaLaComandaBucurestiPage() {
     [],
   )
 
-  const portfolio = useMemo(
-    () => [
-      { src: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1200', alt: 'mobilă la comandă București' },
-      { src: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200', alt: 'living la comandă București' },
-      { src: 'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=1200', alt: 'dormitor la comandă București' },
-      { src: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=1200', alt: 'birou la comandă București' },
-      { src: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200', alt: 'dressing la comandă București' },
-      { src: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=1200', alt: 'mobilă baie la comandă București' },
-    ],
-    [],
-  )
-
   const faq = useMemo(
     () => [
       { q: 'Cât durează execuția?', a: 'Depinde de proiect și materiale. Comunicăm un termen estimativ între 5-30 zile.' },
@@ -148,6 +138,49 @@ export default function MobilaLaComandaBucurestiPage() {
     [],
   )
   const [openFaq, setOpenFaq] = useState(0)
+  const [portfolioPreview, setPortfolioPreview] = useState([])
+  const [portfolioPreviewLoading, setPortfolioPreviewLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    const shuffle = (arr) => {
+      const next = [...arr]
+      for (let i = next.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[next[i], next[j]] = [next[j], next[i]]
+      }
+      return next
+    }
+    const load = async () => {
+      setPortfolioPreviewLoading(true)
+      if (!isSupabaseConfigured) {
+        setPortfolioPreview([])
+        setPortfolioPreviewLoading(false)
+        return
+      }
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .select('id,image_url')
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+      if (!alive) return
+      if (error) {
+        setPortfolioPreview([])
+        setPortfolioPreviewLoading(false)
+        return
+      }
+      const urls = (Array.isArray(data) ? data : [])
+        .map((x) => String(x?.image_url || '').trim())
+        .filter(Boolean)
+      setPortfolioPreview(shuffle(urls).slice(0, 9))
+      setPortfolioPreviewLoading(false)
+    }
+    Promise.resolve().then(load)
+    return () => {
+      alive = false
+    }
+  }, [])
 
   return (
     <div className="bg-cream">
@@ -235,35 +268,46 @@ export default function MobilaLaComandaBucurestiPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-brand-light p-6 shadow-soft">
-              <h2 className="font-heading text-2xl font-semibold text-text-dark">Cere ofertă rapid</h2>
-              <div className="mt-2 max-w-[720px] text-sm text-text-muted">
-                Completezi configuratorul și revenim cu întrebările necesare și oferta.
-              </div>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Link
-                  to={configuratorUrl}
-                  className="inline-flex items-center justify-center rounded-full bg-brand-mid px-7 py-3 text-sm font-semibold text-white transition hover:bg-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
-                >
-                  Cere ofertă
-                </Link>
-                <Link
-                  to={contactUrl}
-                  className="inline-flex items-center justify-center rounded-full border border-border bg-white px-7 py-3 text-sm font-semibold text-text-dark transition hover:bg-cream focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
-                >
-                  Contact
-                </Link>
-              </div>
-            </div>
-
             <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
               <h2 className="font-heading text-2xl font-semibold text-text-dark">Portofoliu</h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {portfolio.map((img) => (
-                  <div key={img.src} className="overflow-hidden rounded-2xl border border-border bg-cream">
-                    <img src={img.src} alt={img.alt} loading="lazy" className="h-44 w-full object-cover" />
+              <div className="mt-5">
+                {portfolioPreviewLoading ? (
+                  <div className="rounded-2xl border border-border bg-cream px-5 py-4 text-sm text-text-muted">
+                    Se încarcă…
                   </div>
-                ))}
+                ) : portfolioPreview.length === 0 ? (
+                  <div className="rounded-2xl border border-border bg-cream px-5 py-4 text-sm text-text-muted">
+                    Nu există imagini în portofoliu încă.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {portfolioPreview.map((url, idx) => (
+                      <Link
+                        key={`${url}-${idx}`}
+                        to="/portofoliu"
+                        className="group block overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-softLg"
+                        aria-label="Vezi portofoliul"
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+                          loading="lazy"
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-5 flex justify-center">
+                <Link
+                  to="/portofoliu"
+                  className="relative inline-flex items-center justify-center text-sm font-semibold text-brand-mid transition focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
+                >
+                  <span className="relative after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-brand-mid after:transition-transform after:duration-300 hover:after:scale-x-100">
+                    Vezi intregul portofoliu
+                  </span>
+                </Link>
               </div>
             </div>
 
@@ -305,42 +349,27 @@ export default function MobilaLaComandaBucurestiPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-[radial-gradient(900px_circle_at_20%_0%,rgba(74,93,78,0.10),transparent_60%),radial-gradient(900px_circle_at_95%_20%,rgba(198,139,89,0.10),transparent_60%),linear-gradient(to_bottom,#F6F2EE,#FFFFFF)] p-8 shadow-soft">
-              <div className="font-heading text-2xl font-semibold text-text-dark">Ești gata să ceri o ofertă?</div>
-              <div className="mt-2 max-w-[720px] text-sm text-text-muted">
-                Trimite cererea în configurator și revenim cu pașii următori.
-              </div>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Link
-                  to={configuratorUrl}
-                  className="inline-flex items-center justify-center rounded-full bg-brand-mid px-7 py-3 text-sm font-semibold text-white transition hover:bg-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
-                >
-                  Cere ofertă
-                </Link>
-                <Link
-                  to={contactUrl}
-                  className="inline-flex items-center justify-center rounded-full border border-border bg-white px-7 py-3 text-sm font-semibold text-text-dark transition hover:bg-cream focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
-                >
-                  Contact
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
-              <h2 className="font-heading text-2xl font-semibold text-text-dark">Zone în care livrăm și montăm</h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {zones.map((z) => (
-                  <button
-                    key={z}
-                    type="button"
-                    className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-text-dark transition hover:scale-[1.02] hover:border-brand-primary/30 hover:bg-brand-light hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
-                  >
-                    {z}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 text-xs text-text-muted">
-                Dacă nu te regăsești pe listă, scrie-ne și îți confirmăm disponibilitatea.
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-[linear-gradient(135deg,#FFFFFF,#FBF6F0_40%,#F3F7F3)] p-6 shadow-soft">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_12%_0%,rgba(198,139,89,0.28),transparent_55%),radial-gradient(900px_circle_at_98%_18%,rgba(74,93,78,0.22),transparent_55%),radial-gradient(700px_circle_at_50%_110%,rgba(255,255,255,0.8),transparent_60%)]"
+              />
+              <div className="relative">
+                <h2 className="font-heading text-2xl font-semibold text-text-dark">Zone în care livrăm și montăm</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {zones.map((z) => (
+                    <button
+                      key={z}
+                      type="button"
+                      className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-text-dark transition hover:scale-[1.02] hover:border-brand-primary/30 hover:bg-brand-light hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
+                    >
+                      {z}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 text-xs text-text-muted">
+                  Dacă nu te regăsești pe listă, scrie-ne și îți confirmăm disponibilitatea.
+                </div>
               </div>
             </div>
           </div>
