@@ -26,10 +26,7 @@ export default function ProductDetailPage() {
   const images = product?.images?.length ? product.images : product ? [product.image] : []
   const activeImg = images[activeIdx] || images[0]
   const whatsappPhone = '40743455866'
-  const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://adaart.ro'
-  const productUrl = `${origin}/produs/${encodeURIComponent(product?.id ?? '')}`
-  const imageLink = activeImg && (activeImg.startsWith('http://') || activeImg.startsWith('https://')) ? activeImg : ''
-  const whatsappText = `Salut! Vreau o oferta personalizata pentru produsul: ${product?.name || ''}${imageLink ? `\n${imageLink}` : ''}\n${productUrl}`
+  const whatsappText = `Salut!\nSunt interesat(ă) de produsul „${product?.name || ''}” și aș dori o ofertă personalizată.\nVă rog să mă contactați pentru a discuta dimensiunile și preferințele mele.\nMulțumesc!`
   const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappText)}`
 
   useEffect(() => {
