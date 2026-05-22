@@ -26,6 +26,8 @@ export default function ProductDetailPage() {
   const images = product?.images?.length ? product.images : product ? [product.image] : []
   const activeImg = images[activeIdx] || images[0]
   const whatsappPhone = '40743455866'
+  const phoneDisplay = '+40 0722 648 175'
+  const phoneTel = 'tel:+40722648175'
   const whatsappText = `Salut!\nSunt interesat(ă) de produsul „${product?.name || ''}” și aș dori o ofertă personalizată.\nVă rog să mă contactați pentru a discuta dimensiunile și preferințele mele.\nMulțumesc!`
   const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappText)}`
 
@@ -290,6 +292,13 @@ export default function ProductDetailPage() {
               </svg>
               Cere ofertă pe WhatsApp
             </a>
+
+            <div className="mt-3 text-center text-xs text-text-muted">
+              Telefon:{' '}
+              <a href={phoneTel} className="font-semibold text-brand-mid hover:text-brand-dark">
+                {phoneDisplay}
+              </a>
+            </div>
 
             <div className="mt-3 text-center text-xs font-bold uppercase tracking-widest text-text-muted">SAU</div>
 
