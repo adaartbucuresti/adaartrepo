@@ -61,7 +61,9 @@ const readDraftFromStorage = () => {
   }
 }
 
-const imageFileToDataUrl = async (file) => {
+const STORAGE_BUCKET = 'product-images'
+
+const imageFileToJpegBlob = async (file) => {
   const maxW = 1800
   const maxH = 1800
   const quality = 0.86
@@ -92,10 +94,39 @@ const imageFileToDataUrl = async (file) => {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, outW, outH)
     ctx.drawImage(img, 0, 0, outW, outH)
-    return canvas.toDataURL('image/jpeg', quality)
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => {
+          if (!b) reject(new Error('Nu am putut procesa imaginea.'))
+          else resolve(b)
+        },
+        'image/jpeg',
+        quality,
+      )
+    })
+    return blob
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
+}
+
+const uploadImageToStorage = async (file) => {
+  if (!supabase?.storage?.from) throw new Error('Supabase Storage nu este configurat.')
+  const blob = await imageFileToJpegBlob(file)
+  const id =
+    typeof crypto !== 'undefined' && crypto?.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  const filePath = `products/${id}.jpg`
+  const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(filePath, blob, {
+    contentType: 'image/jpeg',
+    upsert: false,
+  })
+  if (uploadError) throw uploadError
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
+  const publicUrl = String(data?.publicUrl || '').trim()
+  if (!publicUrl) throw new Error('Nu am putut obține URL public pentru imagine.')
+  return publicUrl
 }
 
 const emptyForm = {
@@ -507,10 +538,10 @@ export default function AdminProducts() {
         break
       }
       try {
-        const dataUrl = await imageFileToDataUrl(file)
-        uploadedUrls.push(dataUrl)
+        const url = await uploadImageToStorage(file)
+        uploadedUrls.push(url)
       } catch (err) {
-        setFormError(err instanceof Error ? err.message : 'Nu am putut procesa imaginea.')
+        setFormError(err?.message || 'Nu am putut încărca imaginea.')
         break
       }
     }
