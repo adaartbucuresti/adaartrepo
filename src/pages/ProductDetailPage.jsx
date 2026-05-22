@@ -270,7 +270,7 @@ export default function ProductDetailPage() {
             <p className="mt-5 text-sm leading-relaxed text-text-muted">{product.description}</p>
 
             <div className="mt-8 space-y-3 rounded-2xl border border-border bg-white p-6">
-              {['Personalizabil', 'Lemn premium', 'Garanție 5 ani', 'Livrare națională'].map((t) => (
+              {['Personalizabil', 'Lemn premium', 'Garanție 2 ani', 'Livrare în București și împrejurimi'].map((t) => (
                 <div key={t} className="flex items-center gap-2 text-sm text-text-dark">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-light text-brand-dark">
                     <Check className="h-4 w-4" />
