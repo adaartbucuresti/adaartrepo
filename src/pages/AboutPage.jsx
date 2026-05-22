@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Leaf, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import LogoWatermark from '../components/LogoWatermark.jsx'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -59,6 +60,7 @@ export default function AboutPage() {
                     className="h-full w-full object-cover"
                     loading="lazy"
                   />
+                  <LogoWatermark />
                   <div className="absolute inset-0 bg-[radial-gradient(90%_80%_at_0%_0%,rgba(198,139,89,0.30),rgba(198,139,89,0)_55%),linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0))]" />
                 </div>
               </div>
@@ -97,13 +99,14 @@ export default function AboutPage() {
             whileInView="visible"
             viewport={{ once: true, amount: 0.25 }}
           >
-            <div className="aspect-[4/3]">
+            <div className="relative aspect-[4/3]">
               <img
                 src="https://images.unsplash.com/photo-1565183928294-7063f23ce0f8?w=1200"
                 alt=""
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
+              <LogoWatermark />
             </div>
           </MotionDiv>
         </div>

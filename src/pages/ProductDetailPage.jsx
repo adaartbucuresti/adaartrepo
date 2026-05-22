@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard.jsx'
 import { products } from '../data/products.js'
+import { lockBodyScroll } from '../lib/lockBodyScroll.js'
 import { supabase } from '../lib/supabase.js'
 
 const noteText =
@@ -97,6 +98,12 @@ export default function ProductDetailPage() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [viewerOpen])
+
+  useEffect(() => {
+    if (!viewerOpen) return
+    const unlock = lockBodyScroll()
+    return () => unlock()
   }, [viewerOpen])
 
   useEffect(() => {

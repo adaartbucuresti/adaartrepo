@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ImagePlus, Pencil, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { fileToWatermarkedJpegBlob } from '../../lib/imageWithWatermark.js'
 import { supabase } from '../../lib/supabase.js'
 
 const DRAFT_KEY = 'admin_portfolio_draft_v1'
@@ -71,7 +72,7 @@ const imageFileToJpegBlob = async (file) => {
 
 const uploadImageToStorage = async (file) => {
   if (!supabase?.storage?.from) throw new Error('Supabase Storage nu este configurat.')
-  const blob = await imageFileToJpegBlob(file)
+  const blob = await fileToWatermarkedJpegBlob(file, { maxW: 2400, maxH: 2400, quality: 0.9 })
   const id =
     typeof crypto !== 'undefined' && crypto?.randomUUID
       ? crypto.randomUUID()
