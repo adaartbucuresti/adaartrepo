@@ -285,7 +285,7 @@ export default function MobilaLaComandaBucurestiPage() {
                       <Link
                         key={`${url}-${idx}`}
                         to="/portofoliu"
-                        className="group relative block overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-softLg"
+                        className="group block overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-softLg"
                         aria-label="Vezi portofoliul"
                       >
                         <img
@@ -294,7 +294,6 @@ export default function MobilaLaComandaBucurestiPage() {
                           className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.02]"
                           loading="lazy"
                         />
-                        <LogoWatermark />
                       </Link>
                     ))}
                   </div>

@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import { Minus, Plus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import LogoWatermark from '../components/LogoWatermark.jsx'
 import { lockBodyScroll } from '../lib/lockBodyScroll.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
@@ -195,7 +194,7 @@ export default function PortfolioPage() {
                         <button
                           type="button"
                           onClick={() => openViewer(imageUrl)}
-                          className="group relative block w-full overflow-hidden rounded-3xl border border-border bg-white/85 shadow-soft backdrop-blur"
+                          className="group block w-full overflow-hidden rounded-3xl border border-border bg-white/85 shadow-soft backdrop-blur"
                           aria-label="Vezi poza"
                         >
                           <img
@@ -204,7 +203,6 @@ export default function PortfolioPage() {
                             className="w-full object-cover transition duration-500 group-hover:scale-[1.01]"
                             loading="lazy"
                           />
-                          <LogoWatermark />
                         </button>
                       ) : null}
                     </div>
@@ -270,7 +268,7 @@ export default function PortfolioPage() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/30 backdrop-blur">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 backdrop-blur">
               <div
                 ref={viewerBoxRef}
                 className="flex max-h-[82vh] items-center justify-center overflow-hidden"
@@ -291,7 +289,6 @@ export default function PortfolioPage() {
                   draggable="false"
                 />
               </div>
-              <LogoWatermark className="bottom-4 right-4 opacity-15" />
             </div>
           </div>
         </div>

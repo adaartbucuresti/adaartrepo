@@ -264,7 +264,7 @@ export default function AuthPage() {
                     isLogin ? 'bg-white text-brand-dark shadow-soft' : 'text-text-muted hover:text-text-dark',
                   ].join(' ')}
                 >
-                  Login
+                  Logare
                 </button>
                 <button
                   type="button"
@@ -280,13 +280,13 @@ export default function AuthPage() {
                       : 'text-text-muted hover:text-text-dark',
                   ].join(' ')}
                 >
-                  Register
+                  Inregistrare cont
                 </button>
               </div>
             ) : (
               <div className="flex items-center justify-between">
                 <Link to="/login" className="text-xs font-semibold text-text-muted underline underline-offset-4 hover:text-text-dark">
-                  Înapoi la login
+                  Înapoi la logare
                 </Link>
                 <button
                   type="button"

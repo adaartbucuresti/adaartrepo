@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import LogoWatermark from '../components/LogoWatermark.jsx'
 import { products } from '../data/products.js'
 
 export default function MobilaLaComandaBucurestiSector2Page() {
@@ -357,9 +356,8 @@ export default function MobilaLaComandaBucurestiSector2Page() {
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {portfolioItems.map((img) => (
-                <div key={img.src} className="relative overflow-hidden rounded-2xl border border-border bg-cream">
+                <div key={img.src} className="overflow-hidden rounded-2xl border border-border bg-cream">
                   <img src={img.src} alt={img.alt} loading="lazy" className="h-56 w-full object-cover" />
-                  <LogoWatermark />
                 </div>
               ))}
             </div>
