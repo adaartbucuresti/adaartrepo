@@ -14,7 +14,7 @@ export default function SmoothScroll() {
 
   useEffect(() => {
     const prefersReduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    const enableSmoothing = !prefersReduce
+    const enableSmoothing = false && !prefersReduce
 
     const root = document.documentElement
     const s = stateRef.current

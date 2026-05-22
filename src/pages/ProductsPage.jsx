@@ -166,25 +166,27 @@ export default function ProductsPage() {
           <span className="font-medium">🛠</span> <span className="italic">{noteText}</span>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-2">
-          {categoryList.map((c) => {
-            const active = c === selected || (selected === 'Toate' && c === 'Toate')
-            return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCategory(c)}
-                className={[
-                  'rounded-full px-4 py-2 text-sm font-medium transition',
-                  active
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-white text-text-dark ring-1 ring-border hover:bg-brand-light',
-                ].join(' ')}
-              >
-                {c}
-              </button>
-            )
-          })}
+        <div className="mt-8 overflow-hidden rounded-3xl border border-border bg-[radial-gradient(900px_circle_at_15%_0%,rgba(74,93,78,0.10),transparent_60%),radial-gradient(900px_circle_at_95%_30%,rgba(198,139,89,0.12),transparent_62%),linear-gradient(to_bottom,#FFFFFF,#F6F2EE)] p-4 shadow-soft">
+          <div className="-m-1 flex flex-wrap gap-2">
+            {categoryList.map((c) => {
+              const active = c === selected || (selected === 'Toate' && c === 'Toate')
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={[
+                    'rounded-full px-4 py-2 text-sm font-medium transition',
+                    active
+                      ? 'bg-brand-primary text-white shadow-soft'
+                      : 'bg-white/90 text-text-dark ring-1 ring-border hover:bg-brand-light',
+                  ].join(' ')}
+                >
+                  {c}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <MotionDiv

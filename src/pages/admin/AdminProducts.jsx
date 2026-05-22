@@ -502,8 +502,8 @@ export default function AdminProducts() {
         setFormError('Unul dintre fișiere nu este o imagine.')
         break
       }
-      if (file.size > 6 * 1024 * 1024) {
-        setFormError('Una dintre imagini este prea mare (max 6MB).')
+      if (file.size > 15 * 1024 * 1024) {
+        setFormError('Una dintre imagini este prea mare (max 15MB).')
         break
       }
       try {
