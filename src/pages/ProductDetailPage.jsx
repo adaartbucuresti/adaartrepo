@@ -1,5 +1,5 @@
 import { Check, Minus, Plus, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard.jsx'
 import { products } from '../data/products.js'
@@ -17,6 +17,11 @@ export default function ProductDetailPage() {
   const [activeIdx, setActiveIdx] = useState(0)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const viewerBoxRef = useRef(null)
+  const viewerImgRef = useRef(null)
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, panX: 0, panY: 0 })
+  const measureRef = useRef({ baseW: 0, baseH: 0, boxW: 0, boxH: 0 })
 
   const images = product?.images?.length ? product.images : product ? [product.image] : []
   const activeImg = images[activeIdx] || images[0]
@@ -92,10 +97,80 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!viewerOpen) return
     setZoom(1)
+    setPan({ x: 0, y: 0 })
   }, [viewerOpen, activeIdx])
 
   const zoomIn = () => setZoom((z) => Math.min(4, Math.round((z + 0.5) * 10) / 10))
   const zoomOut = () => setZoom((z) => Math.max(1, Math.round((z - 0.5) * 10) / 10))
+
+  const clampPan = (next, dims, z) => {
+    if (!dims.baseW || !dims.baseH || !dims.boxW || !dims.boxH) return { x: 0, y: 0 }
+    if (z <= 1) return { x: 0, y: 0 }
+    const maxX = Math.max(0, (dims.baseW * z - dims.boxW) / 2)
+    const maxY = Math.max(0, (dims.baseH * z - dims.boxH) / 2)
+    const x = Math.max(-maxX, Math.min(maxX, next.x))
+    const y = Math.max(-maxY, Math.min(maxY, next.y))
+    return { x, y }
+  }
+
+  useEffect(() => {
+    if (!viewerOpen) return
+    if (zoom <= 1) {
+      if (pan.x || pan.y) setPan({ x: 0, y: 0 })
+      return
+    }
+    const dims = measureRef.current
+    const next = clampPan(pan, dims, zoom)
+    if (next.x !== pan.x || next.y !== pan.y) setPan(next)
+  }, [zoom, viewerOpen])
+
+  useEffect(() => {
+    if (!viewerOpen) return
+    if (zoom !== 1) return
+    const id = window.requestAnimationFrame(() => {
+      const box = viewerBoxRef.current
+      const img = viewerImgRef.current
+      if (!box || !img) return
+      const boxRect = box.getBoundingClientRect()
+      const imgRect = img.getBoundingClientRect()
+      measureRef.current = {
+        baseW: imgRect.width,
+        baseH: imgRect.height,
+        boxW: boxRect.width,
+        boxH: boxRect.height,
+      }
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [viewerOpen, activeIdx, zoom])
+
+  const onViewerPointerDown = (e) => {
+    if (zoom <= 1) return
+    if (!viewerBoxRef.current) return
+    dragRef.current = { active: true, startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y }
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+    }
+  }
+
+  const onViewerPointerMove = (e) => {
+    if (!dragRef.current.active) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    const nextRaw = { x: dragRef.current.panX + dx, y: dragRef.current.panY + dy }
+    const dims = measureRef.current
+    const next = clampPan(nextRaw, dims, zoom)
+    setPan(next)
+  }
+
+  const onViewerPointerUp = (e) => {
+    if (!dragRef.current.active) return
+    dragRef.current.active = false
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+    }
+  }
 
   const similar = useMemo(() => {
     if (similarItems.length) return similarItems
@@ -280,12 +355,23 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 backdrop-blur">
-              <div className="max-h-[82vh] overflow-auto">
+              <div
+                ref={viewerBoxRef}
+                className="flex max-h-[82vh] items-center justify-center overflow-hidden"
+                onPointerDown={onViewerPointerDown}
+                onPointerMove={onViewerPointerMove}
+                onPointerUp={onViewerPointerUp}
+                onPointerCancel={onViewerPointerUp}
+              >
                 <img
+                  ref={viewerImgRef}
                   src={activeImg}
                   alt={product.name}
-                  style={{ width: `${Math.round(zoom * 100)}%` }}
-                  className="block h-auto max-w-none select-none"
+                  style={{ transform: `translate(${Math.round(pan.x)}px, ${Math.round(pan.y)}px) scale(${zoom})` }}
+                  className={[
+                    'block max-h-[82vh] max-w-full select-none object-contain',
+                    zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in',
+                  ].join(' ')}
                   draggable="false"
                 />
               </div>
