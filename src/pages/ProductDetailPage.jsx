@@ -273,7 +273,6 @@ export default function ProductDetailPage() {
             <h1 className="mt-2 font-heading text-4xl font-semibold text-text-dark md:text-5xl">
               {product.name}
             </h1>
-            <div className="mt-3 text-lg font-semibold text-brand-mid">{product.priceLabel}</div>
             <p className="mt-5 text-sm leading-relaxed text-text-muted">{product.description}</p>
 
             <div className="mt-8 space-y-3 rounded-2xl border border-border bg-white p-6">

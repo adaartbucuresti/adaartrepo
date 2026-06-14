@@ -133,8 +133,6 @@ const emptyForm = {
   id: null,
   name: '',
   category: FALLBACK_CATEGORIES[0],
-  price: '',
-  price_label: '',
   description: '',
   badge: '',
   images: [''],
@@ -302,8 +300,6 @@ export default function AdminProducts() {
       id: p.id,
       name: p.name || '',
       category: p.category || categoryOptions[0],
-      price: p.price ?? '',
-      price_label: p.price_label || '',
       description: p.description || '',
       badge: p.badge || '',
       images: Array.isArray(p.images) && p.images.length ? p.images : [''],
@@ -320,18 +316,11 @@ export default function AdminProducts() {
       setFormError('Numele produsului este obligatoriu.')
       return
     }
-    const priceNumber = Number(form.price)
-    if (!Number.isFinite(priceNumber) || priceNumber <= 0) {
-      setFormError('Prețul trebuie să fie un număr mai mare ca 0.')
-      return
-    }
 
     const images = (form.images || []).map((x) => x.trim()).filter(Boolean)
     const payload = {
       name: form.name.trim(),
       category: form.category,
-      price: Math.round(priceNumber),
-      price_label: form.price_label?.trim() || null,
       description: form.description?.trim() || null,
       badge: form.badge?.trim() || null,
       images,
@@ -714,12 +703,11 @@ export default function AdminProducts() {
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
         <div className="overflow-x-auto">
-          <table className="min-w-[860px] w-full text-left text-sm">
+          <table className="min-w-[760px] w-full text-left text-sm">
             <thead className="bg-cream text-xs font-semibold text-text-muted">
               <tr>
                 <th className="px-4 py-3">Produs</th>
                 <th className="px-4 py-3">Categorie</th>
-                <th className="px-4 py-3">Preț</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Acțiuni</th>
               </tr>
@@ -727,19 +715,19 @@ export default function AdminProducts() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-text-muted">
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-text-muted">
                     Se încarcă…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-red-600">
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-red-600">
                     {error}
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-text-muted">
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-text-muted">
                     Nu există produse.
                   </td>
                 </tr>
@@ -760,7 +748,6 @@ export default function AdminProducts() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-text-muted">{p.category}</td>
-                      <td className="px-4 py-3 font-semibold text-text-dark">{p.price} RON</td>
                       <td className="px-4 py-3">
                         <span
                           className={[
@@ -861,27 +848,6 @@ export default function AdminProducts() {
                             </option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-text-muted">Preț de la (RON)</label>
-                        <input
-                          value={form.price}
-                          onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                          className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
-                          inputMode="numeric"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-xs font-semibold text-text-muted">Price label</label>
-                        <input
-                          value={form.price_label}
-                          onChange={(e) => setForm((p) => ({ ...p, price_label: e.target.value }))}
-                          className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none ring-brand-primary/30 focus:ring-2"
-                          placeholder="ex: de la 2.800 RON"
-                        />
                       </div>
                       <div>
                         <label className="text-xs font-semibold text-text-muted">Badge (opțional)</label>
@@ -1029,9 +995,6 @@ export default function AdminProducts() {
                           <div className="text-xs text-text-muted">{form.category}</div>
                           <div className="mt-1 font-heading text-lg font-semibold text-text-dark">
                             {form.name || 'Nume produs'}
-                          </div>
-                          <div className="mt-2 text-sm font-semibold text-brand-dark">
-                            {form.price_label || (form.price ? `de la ${form.price} RON` : 'de la — RON')}
                           </div>
                           {form.badge ? (
                             <div className="mt-3 inline-flex rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-dark">

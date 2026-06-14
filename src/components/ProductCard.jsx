@@ -40,7 +40,6 @@ export default function ProductCard({ product }) {
             {product.name}
           </div>
         </Link>
-        <div className="mt-2 text-sm font-bold text-brand-dark">{product.priceLabel}</div>
 
         <a
           href={whatsappUrl}
