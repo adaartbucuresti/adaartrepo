@@ -8,6 +8,7 @@ import HowItWorks from '../components/HowItWorks.jsx'
 import MarqueeBanner from '../components/MarqueeBanner.jsx'
 import Testimonials from '../components/Testimonials.jsx'
 import { products } from '../data/products.js'
+import { buildBaseStructuredData, upsertJsonLdScript } from '../lib/structuredData.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const fadeUp = {
@@ -37,9 +38,28 @@ export default function HomePage() {
     }
     const previousDescription = meta.getAttribute('content')
     meta.setAttribute('content', description)
+    const { graph, websiteId, organizationId, storeId } = buildBaseStructuredData()
+    const cleanupJsonLd = upsertJsonLdScript('home-base-schema', {
+      '@context': 'https://schema.org',
+      '@graph': [
+        ...graph,
+        {
+          '@type': 'WebPage',
+          '@id': 'https://adaart.ro/#webpage',
+          url: 'https://adaart.ro/',
+          name: title,
+          description,
+          isPartOf: { '@id': websiteId },
+          about: { '@id': storeId },
+          publisher: { '@id': organizationId },
+          inLanguage: 'ro-RO',
+        },
+      ],
+    })
 
     return () => {
       document.title = previousTitle
+      cleanupJsonLd()
       if (!meta) return
       if (!hadMeta) {
         meta.remove()

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { products } from '../data/products.js'
+import { buildBaseStructuredData, upsertJsonLdScript } from '../lib/structuredData.js'
 
 export default function MobilaLaComandaBucurestiSector2Page() {
   const title = 'Mobilă la comandă București Sector 2 | ADA ART MOB'
@@ -61,6 +62,7 @@ export default function MobilaLaComandaBucurestiSector2Page() {
       upsertMeta('twitter:title', 'name', title),
       upsertMeta('twitter:description', 'name', description),
       upsertMeta('twitter:image', 'name', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400'),
+      upsertJsonLdScript('mobila-sector2-schema', jsonLd),
     ]
 
     return () => {
@@ -72,7 +74,7 @@ export default function MobilaLaComandaBucurestiSector2Page() {
         }
       }
     }
-  }, [canonicalUrl])
+  }, [canonicalUrl, description, jsonLd, title])
 
   const portfolioItems = useMemo(() => {
     const sources = [
@@ -128,41 +130,50 @@ export default function MobilaLaComandaBucurestiSector2Page() {
   )
 
   const jsonLd = useMemo(() => {
-    return [
-      {
-        '@context': 'https://schema.org',
-        '@type': 'FurnitureStore',
-        name: 'ADA ART MOB',
-        url: canonicalUrl,
-        areaServed: 'București – Sector 2',
-        address: '[DE COMPLETAT: adresa]',
-        telephone: '[DE COMPLETAT: telefon]',
-        addressLocality: '[DE COMPLETAT: oras]',
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'Service',
-        name: 'Mobilă la comandă',
-        serviceType: 'Mobilă la comandă',
-        areaServed: 'București – Sector 2',
-        provider: { '@type': 'FurnitureStore', name: 'ADA ART MOB' },
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: faq.map((x) => ({
-          '@type': 'Question',
-          name: x.q,
-          acceptedAnswer: { '@type': 'Answer', text: x.a },
-        })),
-      },
-    ]
-  }, [canonicalUrl, faq])
+    const { graph, websiteId, organizationId, storeId } = buildBaseStructuredData()
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        ...graph,
+        {
+          '@type': 'Service',
+          '@id': `${canonicalUrl}#service`,
+          name: 'Mobila la comanda Bucuresti Sector 2',
+          serviceType: 'Mobila la comanda',
+          areaServed: {
+            '@type': 'AdministrativeArea',
+            name: 'Bucuresti Sector 2',
+          },
+          provider: { '@id': storeId },
+          url: canonicalUrl,
+          description,
+        },
+        {
+          '@type': 'FAQPage',
+          '@id': `${canonicalUrl}#faq`,
+          mainEntity: faq.map((x) => ({
+            '@type': 'Question',
+            name: x.q,
+            acceptedAnswer: { '@type': 'Answer', text: x.a },
+          })),
+        },
+        {
+          '@type': 'WebPage',
+          '@id': `${canonicalUrl}#webpage`,
+          url: canonicalUrl,
+          name: title,
+          description,
+          isPartOf: { '@id': websiteId },
+          about: [{ '@id': storeId }, { '@id': `${canonicalUrl}#service` }],
+          publisher: { '@id': organizationId },
+          inLanguage: 'ro-RO',
+        },
+      ],
+    }
+  }, [canonicalUrl, description, faq, title])
 
   return (
     <div className="bg-cream">
-      <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-
       <div className="bg-[radial-gradient(1200px_circle_at_20%_0%,rgba(74,93,78,0.10),transparent_55%),radial-gradient(900px_circle_at_95%_20%,rgba(198,139,89,0.10),transparent_55%),linear-gradient(to_bottom,#F6F2EE,#FFFFFF)]">
         <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
           <div className="text-sm text-text-muted">

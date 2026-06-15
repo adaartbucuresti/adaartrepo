@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { buildBaseStructuredData, upsertJsonLdScript } from '../lib/structuredData.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 export default function MobilaLaComandaBucurestiPage() {
@@ -60,6 +61,7 @@ export default function MobilaLaComandaBucurestiPage() {
       upsertMeta('twitter:title', 'name', title),
       upsertMeta('twitter:description', 'name', description),
       upsertMeta('twitter:image', 'name', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400'),
+      upsertJsonLdScript('mobila-bucuresti-schema', jsonLd),
     ]
 
     return () => {
@@ -72,7 +74,7 @@ export default function MobilaLaComandaBucurestiPage() {
         }
       }
     }
-  }, [canonicalUrl])
+  }, [canonicalUrl, description, jsonLd, title])
 
   const configuratorUrl = '/configurator'
   const phoneDisplay = '+40 0722 648 175'
@@ -140,6 +142,49 @@ export default function MobilaLaComandaBucurestiPage() {
   const [openFaq, setOpenFaq] = useState(0)
   const [portfolioPreview, setPortfolioPreview] = useState([])
   const [portfolioPreviewLoading, setPortfolioPreviewLoading] = useState(true)
+
+  const jsonLd = useMemo(() => {
+    const { graph, websiteId, organizationId, storeId } = buildBaseStructuredData()
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        ...graph,
+        {
+          '@type': 'Service',
+          '@id': `${canonicalUrl}#service`,
+          name: 'Mobila la comanda Bucuresti',
+          serviceType: 'Mobila la comanda',
+          areaServed: [
+            { '@type': 'City', name: 'Bucuresti' },
+            { '@type': 'Country', name: 'Romania' },
+          ],
+          provider: { '@id': storeId },
+          url: canonicalUrl,
+          description,
+        },
+        {
+          '@type': 'FAQPage',
+          '@id': `${canonicalUrl}#faq`,
+          mainEntity: faq.map((x) => ({
+            '@type': 'Question',
+            name: x.q,
+            acceptedAnswer: { '@type': 'Answer', text: x.a },
+          })),
+        },
+        {
+          '@type': 'WebPage',
+          '@id': `${canonicalUrl}#webpage`,
+          url: canonicalUrl,
+          name: title,
+          description,
+          isPartOf: { '@id': websiteId },
+          about: [{ '@id': storeId }, { '@id': `${canonicalUrl}#service` }],
+          publisher: { '@id': organizationId },
+          inLanguage: 'ro-RO',
+        },
+      ],
+    }
+  }, [canonicalUrl, description, faq, title])
 
   useEffect(() => {
     let alive = true
