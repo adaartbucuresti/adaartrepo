@@ -21,6 +21,35 @@ export default function HomePage() {
   const [loadingProducts, setLoadingProducts] = useState(isSupabaseConfigured)
   const [productsError, setProductsError] = useState('')
 
+  useEffect(() => {
+    const title = 'Mobila la comanda Bucuresti Sector 2 | Ada Art Design'
+    const description =
+      'Mobilier la comanda in Bucuresti, Sector 2. Bucatarii, dressing-uri si mobila personalizata. Configurator online. Solicita oferta!'
+    const previousTitle = document.title
+    document.title = title
+
+    let meta = document.head.querySelector('meta[name="description"]')
+    const hadMeta = !!meta
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'description')
+      document.head.appendChild(meta)
+    }
+    const previousDescription = meta.getAttribute('content')
+    meta.setAttribute('content', description)
+
+    return () => {
+      document.title = previousTitle
+      if (!meta) return
+      if (!hadMeta) {
+        meta.remove()
+        return
+      }
+      if (previousDescription === null) meta.removeAttribute('content')
+      else meta.setAttribute('content', previousDescription)
+    }
+  }, [])
+
   const categoryCards = useMemo(() => {
     const map = new Map()
     for (const p of items || []) {
