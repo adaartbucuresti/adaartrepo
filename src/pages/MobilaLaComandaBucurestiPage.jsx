@@ -12,70 +12,6 @@ export default function MobilaLaComandaBucurestiPage() {
     return `https://adaart.ro/mobila-la-comanda-bucuresti/`
   }, [])
 
-  useEffect(() => {
-    const previousTitle = document.title
-    document.title = title
-
-    const upsertMeta = (key, attr, content) => {
-      const selector = `meta[${attr}="${key}"]`
-      let el = document.head.querySelector(selector)
-      if (!el) {
-        el = document.createElement('meta')
-        el.setAttribute(attr, key)
-        document.head.appendChild(el)
-      }
-      const prev = el.getAttribute('content')
-      el.setAttribute('content', content)
-      return () => {
-        if (prev === null) el.remove()
-        else el.setAttribute('content', prev)
-      }
-    }
-
-    const upsertLink = (rel, href) => {
-      const selector = `link[rel="${rel}"]`
-      let el = document.head.querySelector(selector)
-      if (!el) {
-        el = document.createElement('link')
-        el.setAttribute('rel', rel)
-        document.head.appendChild(el)
-      }
-      const prev = el.getAttribute('href')
-      el.setAttribute('href', href)
-      return () => {
-        if (prev === null) el.remove()
-        else el.setAttribute('href', prev)
-      }
-    }
-
-    const cleanups = [
-      upsertMeta('description', 'name', description),
-      upsertLink('canonical', canonicalUrl),
-      upsertMeta('og:title', 'property', title),
-      upsertMeta('og:description', 'property', description),
-      upsertMeta('og:url', 'property', canonicalUrl),
-      upsertMeta('og:type', 'property', 'website'),
-      upsertMeta('og:site_name', 'property', 'ADA ART MOB'),
-      upsertMeta('og:image', 'property', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400'),
-      upsertMeta('twitter:card', 'name', 'summary_large_image'),
-      upsertMeta('twitter:title', 'name', title),
-      upsertMeta('twitter:description', 'name', description),
-      upsertMeta('twitter:image', 'name', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400'),
-      upsertJsonLdScript('mobila-bucuresti-schema', jsonLd),
-    ]
-
-    return () => {
-      document.title = previousTitle
-      for (const fn of cleanups) {
-        try {
-          fn()
-        } catch {
-          void 0
-        }
-      }
-    }
-  }, [canonicalUrl, description, jsonLd, title])
-
   const configuratorUrl = '/configurator'
   const phoneDisplay = '+40 0722 648 175'
   const phoneTel = 'tel:+40722648175'
@@ -185,6 +121,70 @@ export default function MobilaLaComandaBucurestiPage() {
       ],
     }
   }, [canonicalUrl, description, faq, title])
+
+  useEffect(() => {
+    const previousTitle = document.title
+    document.title = title
+
+    const upsertMeta = (key, attr, content) => {
+      const selector = `meta[${attr}="${key}"]`
+      let el = document.head.querySelector(selector)
+      if (!el) {
+        el = document.createElement('meta')
+        el.setAttribute(attr, key)
+        document.head.appendChild(el)
+      }
+      const prev = el.getAttribute('content')
+      el.setAttribute('content', content)
+      return () => {
+        if (prev === null) el.remove()
+        else el.setAttribute('content', prev)
+      }
+    }
+
+    const upsertLink = (rel, href) => {
+      const selector = `link[rel="${rel}"]`
+      let el = document.head.querySelector(selector)
+      if (!el) {
+        el = document.createElement('link')
+        el.setAttribute('rel', rel)
+        document.head.appendChild(el)
+      }
+      const prev = el.getAttribute('href')
+      el.setAttribute('href', href)
+      return () => {
+        if (prev === null) el.remove()
+        else el.setAttribute('href', prev)
+      }
+    }
+
+    const cleanups = [
+      upsertMeta('description', 'name', description),
+      upsertLink('canonical', canonicalUrl),
+      upsertMeta('og:title', 'property', title),
+      upsertMeta('og:description', 'property', description),
+      upsertMeta('og:url', 'property', canonicalUrl),
+      upsertMeta('og:type', 'property', 'website'),
+      upsertMeta('og:site_name', 'property', 'ADA ART MOB'),
+      upsertMeta('og:image', 'property', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400'),
+      upsertMeta('twitter:card', 'name', 'summary_large_image'),
+      upsertMeta('twitter:title', 'name', title),
+      upsertMeta('twitter:description', 'name', description),
+      upsertMeta('twitter:image', 'name', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400'),
+      upsertJsonLdScript('mobila-bucuresti-schema', jsonLd),
+    ]
+
+    return () => {
+      document.title = previousTitle
+      for (const fn of cleanups) {
+        try {
+          fn()
+        } catch {
+          void 0
+        }
+      }
+    }
+  }, [canonicalUrl, description, jsonLd, title])
 
   useEffect(() => {
     let alive = true
