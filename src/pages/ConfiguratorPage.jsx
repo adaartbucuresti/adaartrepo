@@ -135,6 +135,23 @@ function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, n))
 }
 
+function normalizeDimensionDraft(value, min, max) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) return ''
+  return String(clampNumber(parsed, min, max))
+}
+
+function getValidDimension(value, min, max) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) return null
+  if (parsed < min || parsed > max) return null
+  return parsed
+}
+
 function mid(min, max) {
   return Math.round((min + max) / 2)
 }
@@ -272,9 +289,9 @@ export default function ConfiguratorPage() {
   const [otherDescription, setOtherDescription] = useState('')
 
   const range = dimensionRanges[productType]
-  const [widthCm, setWidthCm] = useState(mid(initialRange.w[0], initialRange.w[1]))
-  const [heightCm, setHeightCm] = useState(mid(initialRange.h[0], initialRange.h[1]))
-  const [depthCm, setDepthCm] = useState(mid(initialRange.d[0], initialRange.d[1]))
+  const [widthCm, setWidthCm] = useState('')
+  const [heightCm, setHeightCm] = useState('')
+  const [depthCm, setDepthCm] = useState('')
 
   const [material, setMaterial] = useState(DEFAULT_MATERIAL_KEY)
   const [colorId, setColorId] = useState('')
@@ -302,12 +319,8 @@ export default function ConfiguratorPage() {
     const first = categories[0]
     if (!first) return
     const mapped = mapCategoryToConfiguratorType(first) || 'Dressing / Dulap'
-    const nextRange = dimensionRanges[mapped] || dimensionRanges['Dressing / Dulap']
     setProductCategory(first)
     setProductType(mapped)
-    setWidthCm(mid(nextRange.w[0], nextRange.w[1]))
-    setHeightCm(mid(nextRange.h[0], nextRange.h[1]))
-    setDepthCm(mid(nextRange.d[0], nextRange.d[1]))
   }, [categories, productCategory])
 
   const emailAllowed = useMemo(() => isAllowedEmail(email), [email])
@@ -381,9 +394,9 @@ export default function ConfiguratorPage() {
     setProductCategory(nextInitialCategory)
     setProductName(nextInitialName)
     setOtherDescription('')
-    setWidthCm(mid(nextInitialRange.w[0], nextInitialRange.w[1]))
-    setHeightCm(mid(nextInitialRange.h[0], nextInitialRange.h[1]))
-    setDepthCm(mid(nextInitialRange.d[0], nextInitialRange.d[1]))
+    setWidthCm('')
+    setHeightCm('')
+    setDepthCm('')
     setMaterial(DEFAULT_MATERIAL_KEY)
     setColorId('')
     setExtrasSelected([])
@@ -445,9 +458,9 @@ export default function ConfiguratorPage() {
     setProductType(nextType)
     setProductName(typeof draft.productName === 'string' ? draft.productName : nextInitialName)
 
-    setWidthCm(clampNumber(Number(draft.widthCm), nextRange.w[0], nextRange.w[1]))
-    setHeightCm(clampNumber(Number(draft.heightCm), nextRange.h[0], nextRange.h[1]))
-    setDepthCm(clampNumber(Number(draft.depthCm), nextRange.d[0], nextRange.d[1]))
+    setWidthCm(normalizeDimensionDraft(draft.widthCm, nextRange.w[0], nextRange.w[1]))
+    setHeightCm(normalizeDimensionDraft(draft.heightCm, nextRange.h[0], nextRange.h[1]))
+    setDepthCm(normalizeDimensionDraft(draft.depthCm, nextRange.d[0], nextRange.d[1]))
 
     const draftMaterial =
       typeof draft.material === 'string' && materialOptions.some((m) => m.key === draft.material)
@@ -508,9 +521,9 @@ export default function ConfiguratorPage() {
     setExtrasCustomEnabled(false)
     setExtrasCustomText('')
     const nextRange = dimensionRanges[mapped]
-    setWidthCm((v) => clampNumber(v, nextRange.w[0], nextRange.w[1]))
-    setHeightCm((v) => clampNumber(v, nextRange.h[0], nextRange.h[1]))
-    setDepthCm((v) => clampNumber(v, nextRange.d[0], nextRange.d[1]))
+    setWidthCm((v) => normalizeDimensionDraft(v, nextRange.w[0], nextRange.w[1]))
+    setHeightCm((v) => normalizeDimensionDraft(v, nextRange.h[0], nextRange.h[1]))
+    setDepthCm((v) => normalizeDimensionDraft(v, nextRange.d[0], nextRange.d[1]))
   }, [preselectedProduct])
 
   useEffect(() => {
@@ -576,11 +589,15 @@ export default function ConfiguratorPage() {
   const selectedMaterial = useMemo(() => getMaterialPricing(material), [material])
   const selectedColor = useMemo(() => getColorOption(material, colorId), [material, colorId])
   const colorsForMaterial = useMemo(() => getColorsForMaterial(material), [material])
-  const linearMeters = useMemo(() => calcLinearMeters(widthCm), [widthCm])
+  const widthValue = useMemo(() => getValidDimension(widthCm, range.w[0], range.w[1]), [widthCm, range.w])
+  const heightValue = useMemo(() => getValidDimension(heightCm, range.h[0], range.h[1]), [heightCm, range.h])
+  const depthValue = useMemo(() => getValidDimension(depthCm, range.d[0], range.d[1]), [depthCm, range.d])
+  const dimensionsReady = widthValue !== null && heightValue !== null && depthValue !== null
+  const linearMeters = useMemo(() => calcLinearMeters(widthValue || 0), [widthValue])
   const extrasTotal = useMemo(() => getExtrasTotal(extrasSelected), [extrasSelected])
   const estimatedPrice = useMemo(
-    () => calcEstimatedPriceRon(widthCm, selectedMaterial?.pricePerMl) + extrasTotal,
-    [widthCm, selectedMaterial?.pricePerMl, extrasTotal],
+    () => (dimensionsReady ? calcEstimatedPriceRon(widthValue, selectedMaterial?.pricePerMl) + extrasTotal : 0),
+    [dimensionsReady, widthValue, selectedMaterial?.pricePerMl, extrasTotal],
   )
 
   useEffect(() => {
@@ -590,7 +607,7 @@ export default function ConfiguratorPage() {
   }, [material, colorId])
 
   const summary = useMemo(() => {
-    const dims = `${widthCm}×${heightCm}×${depthCm} cm`
+    const dims = dimensionsReady ? `${widthValue}×${heightValue}×${depthValue} cm` : 'Inca nu s-au introdus dimensiunile'
     const labels = extrasSelected
       .map((id) => getExtraById(id)?.label)
       .filter(Boolean)
@@ -616,6 +633,10 @@ export default function ConfiguratorPage() {
     widthCm,
     heightCm,
     depthCm,
+    widthValue,
+    heightValue,
+    depthValue,
+    dimensionsReady,
     material,
     selectedMaterial,
     colorId,
@@ -655,9 +676,9 @@ export default function ConfiguratorPage() {
       setProductName('')
       setOtherDescription('')
     }
-    setWidthCm((v) => clampNumber(v, nextRange.w[0], nextRange.w[1]))
-    setHeightCm((v) => clampNumber(v, nextRange.h[0], nextRange.h[1]))
-    setDepthCm((v) => clampNumber(v, nextRange.d[0], nextRange.d[1]))
+    setWidthCm((v) => normalizeDimensionDraft(v, nextRange.w[0], nextRange.w[1]))
+    setHeightCm((v) => normalizeDimensionDraft(v, nextRange.h[0], nextRange.h[1]))
+    setDepthCm((v) => normalizeDimensionDraft(v, nextRange.d[0], nextRange.d[1]))
   }
 
   const toggleExtra = (id) => {
@@ -682,6 +703,10 @@ export default function ConfiguratorPage() {
       setStepError('Alege culoarea/finisajul pentru a continua.')
       return
     }
+    if (step === 2 && !dimensionsReady) {
+      setStepError('Introdu dimensiuni valide în intervalele permise pentru a continua.')
+      return
+    }
     setStepError('')
     setStep((s) => Math.min(steps.length, s + 1))
   }
@@ -702,6 +727,10 @@ export default function ConfiguratorPage() {
     }
     if (!consent) {
       setSubmitError('Confirmă acordul GDPR pentru a trimite cererea.')
+      return
+    }
+    if (!dimensionsReady) {
+      setSubmitError('Introdu dimensiuni valide în intervalele permise.')
       return
     }
     if (!fullName.trim()) {
@@ -758,9 +787,9 @@ export default function ConfiguratorPage() {
       client_phone: phone.trim(),
       client_notes: combinedNotes,
       product_type: productCategory && productCategory !== 'Alt produs' ? productCategory : 'Alt produs',
-      width_cm: widthCm,
-      height_cm: heightCm,
-      depth_cm: depthCm,
+      width_cm: widthValue,
+      height_cm: heightValue,
+      depth_cm: depthValue,
       material,
       color: selectedColor.label,
       extras: extrasSelected.map((id) => getExtraById(id)?.label).filter(Boolean),
@@ -898,18 +927,21 @@ export default function ConfiguratorPage() {
                         {
                           label: 'Lățime (cm)',
                           value: widthCm,
+                          displayValue: widthValue,
                           set: setWidthCm,
                           r: range.w,
                         },
                         {
                           label: 'Înălțime (cm)',
                           value: heightCm,
+                          displayValue: heightValue,
                           set: setHeightCm,
                           r: range.h,
                         },
                         {
                           label: 'Adâncime (cm)',
                           value: depthCm,
+                          displayValue: depthValue,
                           set: setDepthCm,
                           r: range.d,
                         },
@@ -920,7 +952,7 @@ export default function ConfiguratorPage() {
                               {f.label}
                             </label>
                             <div className="text-xs font-semibold text-brand-dark">
-                              {f.value}
+                              {f.displayValue ?? '—'}
                             </div>
                           </div>
                           <input
@@ -928,17 +960,30 @@ export default function ConfiguratorPage() {
                             value={f.value}
                             min={f.r[0]}
                             max={f.r[1]}
-                            onChange={(e) =>
-                              f.set(clampNumber(Number(e.target.value), f.r[0], f.r[1]))
-                            }
+                            onChange={(e) => {
+                              f.set(e.target.value)
+                              setStepError('')
+                            }}
+                            onBlur={(e) => {
+                              const raw = String(e.target.value || '').trim()
+                              if (!raw) {
+                                f.set('')
+                                return
+                              }
+                              f.set(normalizeDimensionDraft(raw, f.r[0], f.r[1]))
+                            }}
+                            placeholder={`${f.r[0]} - ${f.r[1]}`}
                             className="mt-3 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none ring-brand-primary/30 focus:ring-2"
                           />
                           <input
                             type="range"
-                            value={f.value}
+                            value={f.displayValue ?? f.r[0]}
                             min={f.r[0]}
                             max={f.r[1]}
-                            onChange={(e) => f.set(Number(e.target.value))}
+                            onChange={(e) => {
+                              f.set(e.target.value)
+                              setStepError('')
+                            }}
                             className="mt-3 w-full accent-[var(--green-primary)]"
                           />
                           <div className="mt-2 flex items-center justify-between text-[11px] text-text-muted">
@@ -960,7 +1005,7 @@ export default function ConfiguratorPage() {
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       {materialOptions.map((m) => {
                         const active = m.key === material
-                        const price = calcEstimatedPriceRon(widthCm, m.pricePerMl)
+                        const price = dimensionsReady ? calcEstimatedPriceRon(widthValue, m.pricePerMl) : 0
                         return (
                           <button
                             key={m.key}

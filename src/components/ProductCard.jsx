@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 export default function ProductCard({ product }) {
   const badge = product.badge
-  const whatsappPhone = '40743455866'
+  const whatsappPhone = '40722648175'
   const whatsappText = `Salut!\nSunt interesat(ă) de produsul „${product?.name || ''}” și aș dori o ofertă personalizată.\nVă rog să mă contactați pentru a discuta dimensiunile și preferințele mele.\nMulțumesc!`
   const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappText)}`
 
