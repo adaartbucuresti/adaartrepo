@@ -596,8 +596,8 @@ export default function ConfiguratorPage() {
   const linearMeters = useMemo(() => calcLinearMeters(widthValue || 0), [widthValue])
   const extrasTotal = useMemo(() => getExtrasTotal(extrasSelected), [extrasSelected])
   const estimatedPrice = useMemo(
-    () => (dimensionsReady ? calcEstimatedPriceRon(widthValue, selectedMaterial?.pricePerMl) + extrasTotal : 0),
-    [dimensionsReady, widthValue, selectedMaterial?.pricePerMl, extrasTotal],
+    () => (dimensionsReady ? calcEstimatedPriceRon(widthValue, selectedMaterial?.pricePerMl) : 0),
+    [dimensionsReady, widthValue, selectedMaterial?.pricePerMl],
   )
 
   useEffect(() => {
