@@ -1115,7 +1115,6 @@ export default function ConfiguratorPage() {
                               </span>
                               <div className="text-sm font-medium text-text-dark">{o.label}</div>
                             </div>
-                            <div className="text-sm font-semibold text-brand-mid">+{o.price} RON</div>
                           </button>
                         )
                       })}

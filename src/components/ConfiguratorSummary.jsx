@@ -18,23 +18,30 @@ export default function ConfiguratorSummary({ summary, estimatedPrice }) {
 
         <div className="mt-4 space-y-3">
           {entries.map((e) => (
-            <div key={e.label} className="flex items-start justify-between gap-4">
-              <div className="text-xs text-text-muted">{e.label}</div>
-              <div
-                className="text-right text-xs font-medium text-text-dark"
-                style={
-                  e.label === 'Opțiuni extra'
-                    ? {
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }
-                    : undefined
-                }
-              >
-                {e.value}
+            <div key={e.label} className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-4">
+                <div className="text-xs text-text-muted">{e.label}</div>
+                <div
+                  className="text-right text-xs font-medium text-text-dark"
+                  style={
+                    e.label === 'Opțiuni extra'
+                      ? {
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }
+                      : undefined
+                  }
+                >
+                  {e.value}
+                </div>
               </div>
+              {e.label === 'Opțiuni extra' && (
+                <div className="text-[10px] font-bold text-text-muted leading-tight">
+                  Pretul poate creste in functie de optiunile extra alese
+                </div>
+              )}
             </div>
           ))}
         </div>
