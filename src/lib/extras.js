@@ -2,7 +2,6 @@ export const EXTRAS_OPTIONS = [
   { id: 'led_interior', label: 'Iluminat interior LED', price: 350 },
   { id: 'oglinda_usa', label: 'Oglindă pe ușă', price: 280 },
   { id: 'push_open', label: 'Sistem push-open fără mânere', price: 420 },
-  { id: 'montaj_transport', label: 'Montaj și transport inclus', price: 600 },
   { id: 'balamale_soft_close', label: 'Balamale soft-close (amortizare)', price: 250 },
   { id: 'glisiere_soft_close', label: 'Glisiere sertare soft-close', price: 320 },
   { id: 'sertare_interioare', label: 'Sertare interioare suplimentare', price: 450 },

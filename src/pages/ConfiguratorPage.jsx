@@ -1012,22 +1012,34 @@ export default function ConfiguratorPage() {
                             type="button"
                             onClick={() => setMaterial(m.key)}
                             className={[
-                              'rounded-2xl border p-5 text-left transition',
-                              active ? 'border-brand-primary bg-brand-light' : 'border-border bg-white hover:bg-warm',
+                              'relative overflow-hidden rounded-[24px] border-2 p-6 text-left transition-all duration-300 shadow-soft hover:shadow-softLg',
+                              active 
+                                ? 'border-brand-primary bg-brand-light ring-1 ring-brand-primary' 
+                                : 'border-border bg-white hover:border-brand-primary/30',
                             ].join(' ')}
+                            style={{ backgroundColor: m.bgColor }}
                           >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="text-sm font-semibold text-text-dark">{m.key}</div>
+                            {/* Imagine textură */}
+                            <div className="absolute top-4 right-4 h-12 w-12 overflow-hidden rounded-xl border border-white/50 shadow-sm">
+                              <img src={m.textureUrl} alt="" className="h-full w-full object-cover" />
+                            </div>
+
+                            <div className="flex h-full flex-col justify-between gap-6">
+                              <div className="pr-14">
+                                <div className="text-base font-bold text-text-dark leading-tight">{m.key}</div>
                                 <div className="mt-1 text-xs font-medium text-text-muted">{m.description}</div>
-                                <div className="mt-2 text-xs text-text-muted">
-                                  {m.pricePerMl} RON / ml · {linearMeters.toFixed(2)} ml
-                                </div>
                               </div>
-                              <div className="shrink-0 text-right">
-                                <div className="text-[11px] font-semibold text-text-muted">Preț</div>
-                                <div className="mt-1 text-sm font-semibold text-brand-mid">
-                                  {price.toLocaleString('ro-RO')} RON
+
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-baseline justify-between gap-2 border-t border-black/5 pt-4">
+                                  <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Preț</div>
+                                  <div className="text-xl font-black text-brand-mid">
+                                    {price.toLocaleString('ro-RO')} RON
+                                  </div>
+                                </div>
+                                
+                                <div className="text-[10px] font-medium text-text-muted/70 italic">
+                                  {m.pricePerMl.toLocaleString('ro-RO')} RON / ml · {linearMeters.toFixed(2)} ml
                                 </div>
                               </div>
                             </div>

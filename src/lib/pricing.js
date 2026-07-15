@@ -1,8 +1,32 @@
 export const MATERIAL_PRICING = [
-  { key: 'PAL melaminat', description: 'Carcasă PAL', pricePerMl: 2500 },
-  { key: 'Carcasă PAL + Uși MDF AGT', description: 'Carcasă PAL', pricePerMl: 3000 },
-  { key: 'Carcasă PAL + Uși MDF înfoliat', description: 'Carcasă PAL', pricePerMl: 3500 },
-  { key: 'Carcasă PAL + Uși MDF vopsit', description: 'Carcasă PAL', pricePerMl: 4000 },
+  { 
+    key: 'PAL melaminat', 
+    description: 'Carcasă PAL', 
+    pricePerMl: 2500,
+    bgColor: '#FAF9F6',
+    textureUrl: '/options/optiune1.jpg'
+  },
+  { 
+    key: 'Carcasă PAL + Uși MDF AGT', 
+    description: 'Carcasă PAL', 
+    pricePerMl: 3000,
+    bgColor: '#F4F4F5',
+    textureUrl: '/options/optiune2.jpg'
+  },
+  { 
+    key: 'Carcasă PAL + Uși MDF înfoliat', 
+    description: 'Carcasă PAL', 
+    pricePerMl: 3500,
+    bgColor: '#F1F5F9',
+    textureUrl: '/options/optiune3.jpg'
+  },
+  { 
+    key: 'Carcasă PAL + Uși MDF vopsit', 
+    description: 'Carcasă PAL', 
+    pricePerMl: 4000,
+    bgColor: '#FAFAFA',
+    textureUrl: '/options/optiune4.jpg'
+  },
 ]
 
 export const DEFAULT_MATERIAL_KEY = MATERIAL_PRICING[0]?.key || 'PAL melaminat'
