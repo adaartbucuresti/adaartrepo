@@ -31,6 +31,38 @@ export const MATERIAL_PRICING = [
 
 export const DEFAULT_MATERIAL_KEY = MATERIAL_PRICING[0]?.key || 'PAL melaminat'
 
+export const LEAD_GEN_CATEGORIES = [
+  { key: 'Noptiere', label: 'Noptiere la comandă', startingPrice: 350 },
+  { key: 'Paturi (fără saltea)', label: 'Paturi (fără saltea)', startingPrice: 1800 },
+  { key: 'Panouri TV / Comode TV', label: 'Panouri TV / Comode TV', startingPrice: 900 },
+  { key: 'Birouri', label: 'Birouri la comandă', startingPrice: 700 },
+  { key: 'Mobilier Baie', label: 'Mobilier Baie la comandă', startingPrice: 800 },
+  { key: 'Biblioteci / Corpuri living', label: 'Biblioteci / Corpuri living', startingPrice: 1500 },
+]
+
+export function isLeadGenCategory(categoryName) {
+  if (!categoryName) return false
+  const name = String(categoryName).trim().toLowerCase()
+  // Verificăm atât cheia cât și label-ul, dar și dacă numele conține fragmente relevante
+  return LEAD_GEN_CATEGORIES.some(c => {
+    const key = c.key.toLowerCase()
+    const label = c.label.toLowerCase()
+    return name === key || name === label || 
+           (key.includes('/') && key.split('/').some(part => name.includes(part.trim().toLowerCase())))
+  })
+}
+
+export function getLeadGenData(categoryName) {
+  if (!categoryName) return null
+  const name = String(categoryName).trim().toLowerCase()
+  return LEAD_GEN_CATEGORIES.find(c => {
+    const key = c.key.toLowerCase()
+    const label = c.label.toLowerCase()
+    return name === key || name === label ||
+           (key.includes('/') && key.split('/').some(part => name.includes(part.trim().toLowerCase())))
+  }) || null
+}
+
 export function calcLinearMeters(widthCm) {
   const w = Number(widthCm) || 0
   return Math.max(0, w) / 100

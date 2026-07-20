@@ -1,4 +1,4 @@
-export default function ConfiguratorSummary({ summary, estimatedPrice }) {
+export default function ConfiguratorSummary({ summary, estimatedPrice, isLeadGen }) {
   const entries = [
     { label: 'Produs', value: summary.productType },
     { label: 'Produs selectat', value: summary.productName },
@@ -51,7 +51,7 @@ export default function ConfiguratorSummary({ summary, estimatedPrice }) {
         <div className="flex items-end justify-between gap-4">
           <div className="text-xs text-text-muted">Preț estimativ</div>
           <div className="text-2xl font-semibold text-brand-mid">
-            {estimatedPrice.toLocaleString('ro-RO')} RON
+            {isLeadGen ? 'De la ' : ''}{estimatedPrice.toLocaleString('ro-RO')} RON
           </div>
         </div>
 

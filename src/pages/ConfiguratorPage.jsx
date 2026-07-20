@@ -21,7 +21,15 @@ import ConfiguratorSummary from '../components/ConfiguratorSummary.jsx'
 import { products } from '../data/products.js'
 import { getColorOption, getColorsForMaterial, isColorValidForMaterial } from '../lib/colors.js'
 import { EXTRAS_OPTIONS, getExtraById, getExtrasTotal } from '../lib/extras.js'
-import { DEFAULT_MATERIAL_KEY, MATERIAL_PRICING, calcEstimatedPriceRon, calcLinearMeters, getMaterialPricing } from '../lib/pricing.js'
+import { 
+  DEFAULT_MATERIAL_KEY, 
+  MATERIAL_PRICING, 
+  calcEstimatedPriceRon, 
+  calcLinearMeters, 
+  getMaterialPricing,
+  isLeadGenCategory,
+  getLeadGenData
+} from '../lib/pricing.js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const DRAFT_STORAGE_KEY = 'configuratorDraft_v1'
@@ -205,7 +213,16 @@ export default function ConfiguratorPage() {
   const [categories, setCategories] = useState(() => {
     const local = readLocalCategories()
     if (local.length) return local
-    return ['Dulapuri', 'Paturi', 'Birouri', 'Biblioteci', 'Comode', 'Noptiere']
+    return [
+      'Bucătării',
+      'Dulapuri',
+      'Noptiere',
+      'Paturi (fără saltea)',
+      'Panouri TV / Comode TV',
+      'Birouri',
+      'Mobilier Baie',
+      'Biblioteci / Corpuri living',
+    ]
   })
 
   const preselectedProduct = useMemo(() => {
@@ -595,10 +612,13 @@ export default function ConfiguratorPage() {
   const dimensionsReady = widthValue !== null && heightValue !== null && depthValue !== null
   const linearMeters = useMemo(() => calcLinearMeters(widthValue || 0), [widthValue])
   const extrasTotal = useMemo(() => getExtrasTotal(extrasSelected), [extrasSelected])
-  const estimatedPrice = useMemo(
-    () => (dimensionsReady ? calcEstimatedPriceRon(widthValue, selectedMaterial?.pricePerMl) : 0),
-    [dimensionsReady, widthValue, selectedMaterial?.pricePerMl],
-  )
+  const leadGenData = useMemo(() => getLeadGenData(productCategory), [productCategory])
+  const isLeadGen = !!leadGenData
+
+  const estimatedPrice = useMemo(() => {
+    if (isLeadGen) return leadGenData.startingPrice
+    return dimensionsReady ? calcEstimatedPriceRon(widthValue, selectedMaterial?.pricePerMl) : 0
+  }, [isLeadGen, leadGenData, dimensionsReady, widthValue, selectedMaterial?.pricePerMl])
 
   useEffect(() => {
     if (!colorId) return
@@ -618,7 +638,9 @@ export default function ConfiguratorPage() {
       productType: productCategory || productType,
       productName: productName || undefined,
       dimensionsLabel: dims,
-      materialLabel: selectedMaterial ? `${selectedMaterial.key} — ${selectedMaterial.pricePerMl} RON/ml` : material,
+      materialLabel: selectedMaterial 
+        ? (isLeadGen ? selectedMaterial.key : `${selectedMaterial.key} — ${selectedMaterial.pricePerMl} RON/ml`) 
+        : material,
       colorId: colorId || undefined,
       colorLabel: selectedColor?.label || undefined,
       extrasLabel,
@@ -909,12 +931,21 @@ export default function ConfiguratorPage() {
                         {stepError ? <div className="text-xs font-semibold text-red-600">{stepError}</div> : null}
                       </div>
                     ) : (
-                      productName ? (
-                        <div className="mt-6 rounded-2xl border border-brand-primary/15 bg-brand-light p-5">
-                          <div className="text-xs font-semibold text-brand-dark">Nume produs</div>
-                          <div className="mt-2 text-sm font-semibold text-text-dark">{productName}</div>
-                        </div>
-                      ) : null
+                      <div className="mt-6 space-y-4">
+                        {isLeadGen && (
+                          <div className="rounded-2xl border border-brand-primary/15 bg-brand-light p-5">
+                            <div className="text-lg font-bold text-text-dark">
+                              {leadGenData.label} – Prețuri de la {leadGenData.startingPrice} RON
+                            </div>
+                          </div>
+                        )}
+                        {productName && !isLeadGen ? (
+                          <div className="rounded-2xl border border-brand-primary/15 bg-brand-light p-5">
+                            <div className="text-xs font-semibold text-brand-dark">Nume produs</div>
+                            <div className="mt-2 text-sm font-semibold text-text-dark">{productName}</div>
+                          </div>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                 ) : null}
@@ -1030,18 +1061,20 @@ export default function ConfiguratorPage() {
                                 <div className="mt-1 text-xs font-medium text-text-muted">{m.description}</div>
                               </div>
 
-                              <div className="flex flex-col gap-3">
-                                <div className="flex items-baseline justify-between gap-2 border-t border-black/5 pt-4">
-                                  <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Preț</div>
-                                  <div className="text-xl font-black text-brand-mid">
-                                    {price.toLocaleString('ro-RO')} RON
+                              {!isLeadGen && (
+                                <div className="flex flex-col gap-3">
+                                  <div className="flex items-baseline justify-between gap-2 border-t border-black/5 pt-4">
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Preț</div>
+                                    <div className="text-xl font-black text-brand-mid">
+                                      {price.toLocaleString('ro-RO')} RON
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="text-[10px] font-medium text-text-muted/70 italic">
+                                    {m.pricePerMl.toLocaleString('ro-RO')} RON / ml · {linearMeters.toFixed(2)} ml
                                   </div>
                                 </div>
-                                
-                                <div className="text-[10px] font-medium text-text-muted/70 italic">
-                                  {m.pricePerMl.toLocaleString('ro-RO')} RON / ml · {linearMeters.toFixed(2)} ml
-                                </div>
-                              </div>
+                              )}
                             </div>
                           </button>
                         )
@@ -1286,7 +1319,7 @@ export default function ConfiguratorPage() {
                       className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-brand-primary px-7 py-3 text-sm font-medium text-white transition hover:bg-brand-mid disabled:opacity-50"
                       disabled={!consent || submitLoading || !fullName.trim() || !phone.trim() || !emailAllowed || !filesSizeOk}
                     >
-                      {submitLoading ? 'Se trimite…' : 'Trimite cererea de ofertă'}
+                      {submitLoading ? 'Se trimite…' : (isLeadGen ? 'Trimite configurarea pentru ofertă personalizată' : 'Trimite cererea de ofertă')}
                     </button>
                     {submitError ? (
                       <div className="mt-3 text-xs text-red-600">{submitError}</div>
@@ -1294,6 +1327,12 @@ export default function ConfiguratorPage() {
                   </div>
                 ) : null}
               </div>
+
+              {isLeadGen && (
+                <p className="mt-8 text-[10px] text-text-muted italic leading-relaxed">
+                  *Prețurile afișate sunt orientative, au caracter informativ pentru configurații de bază (carcasă PAL standard) și nu includ electrocasnicele, saltelele sau accesoriile premium. Fiecare proiect se calculează individual în funcție de materialele și feroneria alese.*
+                </p>
+              )}
 
               <div className="mt-10 flex items-center justify-between gap-3">
                 <button
@@ -1321,7 +1360,7 @@ export default function ConfiguratorPage() {
                 <div className="mt-3 text-xs text-text-muted">
                   Preț estimativ:{' '}
                   <span className="font-semibold text-brand-mid">
-                    {estimatedPrice.toLocaleString('ro-RO')} RON
+                    {isLeadGen ? 'De la ' : ''}{estimatedPrice.toLocaleString('ro-RO')} RON
                   </span>
                 </div>
                 <div className="mt-3 text-xs italic text-text-muted">
@@ -1331,11 +1370,11 @@ export default function ConfiguratorPage() {
             </div>
           </form>
 
-          <ConfiguratorSummary summary={summary} estimatedPrice={estimatedPrice} />
-        </div>
+        <ConfiguratorSummary summary={summary} estimatedPrice={estimatedPrice} isLeadGen={isLeadGen} />
       </div>
+    </div>
 
-      <AnimatePresence>
+    <AnimatePresence>
         {successOpen ? (
           <MotionDiv
             className="fixed inset-0 z-[60] flex items-center justify-center px-4"
